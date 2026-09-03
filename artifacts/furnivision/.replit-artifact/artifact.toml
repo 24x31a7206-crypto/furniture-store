@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "FurniVision Furniture Store"
+description = "A premium furniture storefront with product discovery, room visualization, saved spaces, customer accounts, wishlist, comparison, reviews, and a secure checkout foundation."
+version = "1.0.0"
+id = "artifacts/furnivision"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24662
+
+[services.development]
+run = "pnpm --filter @workspace/furnivision run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/furnivision", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/furnivision/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24662"
+BASE_PATH = "/"
