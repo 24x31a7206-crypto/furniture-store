@@ -62,7 +62,7 @@ export async function signOutUser() {
 
 const ownerRef = () => db ? doc(db, 'adminConfig', 'primary') : null;
 
-export async function ensureFirstUserAdmin(user: User) {
+export async function ensureFirstUserAdmin(user: Pick<User, 'uid'>) {
   if (!db || !firebaseEnabled) return false;
   const ref = doc(db, 'adminConfig', 'primary');
   await runTransaction(db, async (transaction) => {
