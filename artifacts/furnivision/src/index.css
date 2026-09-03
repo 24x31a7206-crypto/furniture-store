@@ -306,3 +306,78 @@ main section:not(:first-of-type) { scroll-margin-top: 2rem; }
   .tilt-card:hover { transform: none; }
   .reveal-on-scroll { filter: none; }
 }
+
+
+/* Dark luxury theme — deep mineral tones, warm ivory, and aged brass */
+:root {
+  --background: 30 8% 8%;
+  --foreground: 39 36% 92%;
+  --border: 35 12% 22%;
+  --input: 35 12% 22%;
+  --ring: 37 34% 60%;
+  --card: 30 8% 11%;
+  --card-foreground: 39 36% 92%;
+  --primary: 39 36% 92%;
+  --primary-foreground: 30 8% 8%;
+  --secondary: 37 34% 60%;
+  --secondary-foreground: 30 8% 8%;
+  --muted: 30 7% 16%;
+  --muted-foreground: 36 12% 64%;
+  --accent: 25 45% 53%;
+  --accent-foreground: 39 36% 92%;
+  --app-font-sans: 'DM Sans', sans-serif;
+  --app-font-serif: 'Instrument Serif', serif;
+}
+
+body {
+  background:
+    radial-gradient(circle at 82% -10%, rgba(185, 154, 99, .12), transparent 28rem),
+    radial-gradient(circle at 8% 36%, rgba(111, 75, 48, .09), transparent 24rem),
+    #0b0b0a;
+  color: #f3eee4;
+}
+
+::selection { background: #b99a63; color: #0b0b0a; }
+
+/* Re-map the existing page surfaces so every route shares the same luxury base. */
+[class~="bg-[#171512]"] { background-color: #171512 !important; }
+[class~="bg-[#0b0b0a]"] { background-color: #0b0b0a !important; }
+[class~="bg-[#24231f]"] { background-color: #24231f !important; }
+[class~="bg-[#292823]"] { background-color: #292823 !important; }
+[class~="bg-[#2a2823]"] { background-color: #2a2823 !important; }
+[class~="text-[#f3eee4]"] { color: #f3eee4 !important; }
+[class~="text-[#b99a63]"] { color: #b99a63 !important; }
+[class~="text-[#bd8250]"] { color: #bd8250 !important; }
+[class~="border-[#f3eee4]"] { border-color: rgba(243, 238, 228, .22) !important; }
+[class~="border-[#b99a63]"] { border-color: #b99a63 !important; }
+
+/* Warm metal instead of neon: accents remain visible but never overpower the product. */
+[class~="bg-[#b99a63]"] { background-color: #b99a63 !important; }
+[class~="bg-[#bd8250]"] { background-color: #bd8250 !important; }
+
+.tilt-card .image-reveal {
+  background: #2a2823;
+  border-color: rgba(185, 154, 99, .2);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .24), 0 28px 70px rgba(0, 0, 0, .26);
+}
+.tilt-card:hover .image-reveal {
+  border-color: rgba(185, 154, 99, .48);
+  box-shadow: 0 14px 0 rgba(0, 0, 0, .28), 0 36px 90px rgba(0, 0, 0, .42);
+}
+.tilt-card::before {
+  background: radial-gradient(ellipse, rgba(0, 0, 0, .56), transparent 68%);
+}
+
+header > div::before {
+  border-color: rgba(243, 238, 228, .13);
+  background: rgba(11, 11, 10, .28);
+}
+
+input::placeholder { color: rgba(243, 238, 228, .45); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline-color: #b99a63;
+}
+
+@media (max-width: 767px) {
+  body { background-color: #0b0b0a; }
+}
