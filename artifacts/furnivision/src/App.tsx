@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
 import { ArrowDownRight, ArrowRight, ArrowRightLeft, ArrowUpRight, Box, Check, ChevronDown, ChevronLeft, Eye, Heart, Instagram, Menu, Move3d, Play, Plus, Ruler, Search, ShoppingBag, Sparkles, Star, Truck, Upload, UserRound, X } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { createAccount, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth } from './lib/auth';
@@ -438,8 +438,22 @@ function CompareTray({ items, open, onToggle, onRemove }: { items: Product[]; op
 
 function ProductCard({ product, liked, onLike, onAdd, compared = false, onCompare }: { product: Product; liked: boolean; onLike: () => void; onAdd: () => void; compared?: boolean; onCompare?: () => void }) {
   const meta = productMeta(product);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [pointerActive, setPointerActive] = useState(false);
+  const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'touch') return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: Number((-y * 5).toFixed(2)), y: Number((x * 5).toFixed(2)) });
+    setPointerActive(true);
+  };
+  const resetPointer = () => {
+    setPointerActive(false);
+    setTilt({ x: 0, y: 0 });
+  };
   return (
-    <article className="tilt-card group relative perspective" data-testid={`card-product-${product.id}`}>
+    <article className="tilt-card group relative perspective" onPointerMove={handlePointerMove} onPointerLeave={resetPointer} onPointerCancel={resetPointer} style={pointerActive ? { transform: `translate3d(0, -10px, 0) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` } : undefined} data-testid={`card-product-${product.id}`}>
       <Link href={`/furniture/${product.id}`} className="block" data-testid={`link-product-${product.id}`}>
         <div className="image-reveal relative aspect-[.88] overflow-hidden rounded-[1.3rem] bg-[#ded7cc]">
           <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
