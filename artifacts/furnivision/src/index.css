@@ -650,3 +650,21 @@ main > section:first-of-type:hover .hero-intro-video {
   main > section:first-of-type .hero-intro-video,
   main > section:first-of-type:hover .hero-intro-video { opacity: .34; transform: none; transition: none; }
 }
+
+
+/* Video controls stay visible, quiet, and easy to understand. */
+.hero-video-controls button {
+  min-height: 2rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+  transition: background .35s ease, border-color .35s ease, color .35s ease, transform .35s var(--fv-ease);
+}
+.hero-video-controls button:hover { background: rgba(11, 11, 10, .72); transform: translateY(-2px); }
+.hero-video-controls button:active { transform: translateY(0) scale(.97); }
+.hero-scene-link { white-space: nowrap; }
+@media (max-width: 767px) {
+  .hero-video-controls { bottom: 1rem; right: 1rem; }
+  .hero-video-controls button { min-height: 2.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-video-controls button { transition: none; }
+}
