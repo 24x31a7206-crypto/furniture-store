@@ -8,9 +8,13 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/adminConfig/primary).data.uid == request.auth.uid;
     }
 
+    function isActiveWorker() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/workers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/workers/$(request.auth.uid)).data.active == true;
+    }
+
     match /adminConfig/primary {
-      // Anyone authenticated may safely check an empty owner slot. Once claimed,
-      // only the owner can read it, and nobody can replace or delete it from the client.
       allow read: if request.auth != null
         && (!exists(/databases/$(database)/documents/adminConfig/primary)
           || resource.data.uid == request.auth.uid);
@@ -19,6 +23,25 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
         && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    match /workers/{workerId} {
+      allow read: if isStorefrontOwner()
+        || (request.auth != null && request.auth.uid == workerId);
+      allow create, update, delete: if isStorefrontOwner();
+    }
+
+    match /orders/{orderId} {
+      allow create: if request.auth != null
+        && request.resource.data.customerId == request.auth.uid;
+      allow read: if isStorefrontOwner()
+        || (request.auth != null && resource.data.customerId == request.auth.uid)
+        || (isActiveWorker() && resource.data.assignedWorkerId == request.auth.uid);
+      allow update: if isStorefrontOwner()
+        || (isActiveWorker()
+          && resource.data.assignedWorkerId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if isStorefrontOwner();
     }
 
     match /users/{userId}/{collectionName}/{documentId} {
