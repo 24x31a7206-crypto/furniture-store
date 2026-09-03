@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
-import { ArrowDownRight, ArrowRight, ArrowRightLeft, ArrowUpRight, Box, Check, ChevronDown, ChevronLeft, Eye, Heart, Instagram, Menu, Move3d, Play, Plus, Ruler, Search, ShoppingBag, Sparkles, Star, Truck, Upload, UserRound, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
+import { ArrowDownRight, ArrowRight, ArrowRightLeft, ArrowUpRight, Box, Check, ChevronDown, ChevronLeft, Eye, Heart, Instagram, Menu, Move3d, Pause, Play, Plus, RotateCcw, Ruler, Search, ShoppingBag, Sparkles, Star, Truck, Upload, UserRound, X } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { createAccount, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth } from './lib/auth';
 import { deleteCatalogProduct, loadCatalog, saveCatalogProduct, type CatalogProduct } from './lib/admin';
@@ -488,6 +488,20 @@ function Marquee() {
 function Home({ onAdd, liked, onLike, compared, onCompare }: { onAdd: (product: Product) => void; liked: string[]; onLike: (id: string) => void; compared: string[]; onCompare: (id: string) => void }) {
   const [activeProduct, setActiveProduct] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const [heroVideoPlaying, setHeroVideoPlaying] = useState(true);
+  const toggleHeroVideo = () => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    if (video.paused) void video.play();
+    else video.pause();
+  };
+  const replayHeroVideo = () => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    void video.play();
+  };
   const featured = products[activeProduct];
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll('main section'));
@@ -506,10 +520,10 @@ function Home({ onAdd, liked, onLike, compared, onCompare }: { onAdd: (product: 
   return (
     <main>
       <section className="relative min-h-[720px] overflow-hidden bg-[#24231f] md:min-h-[820px]">
-        <video className="hero-intro-video absolute inset-0 h-full w-full object-cover object-center mix-blend-multiply opacity-70" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" poster="/assets/hero-room.jpg" src="/assets/furnivision-intro.mp4" />
-        <div className="hero-intro-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(25,36,54,.10),transparent_55%,rgba(220,229,108,.18))]" />
+        <video ref={heroVideoRef} className="hero-intro-video absolute inset-0 h-full w-full object-cover object-center mix-blend-multiply opacity-70" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" poster="/assets/hero-room.jpg" src="/assets/furnivision-intro.mp4" onPlay={() => setHeroVideoPlaying(true)} onPause={() => setHeroVideoPlaying(false)} />
+        <div className="hero-intro-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(25,36,54,.10),transparent_55%,rgba(220,229,108,.18))]" /><div className="hero-video-controls absolute bottom-7 right-5 z-10 flex items-center gap-2 md:bottom-10 md:right-10"><button type="button" onClick={toggleHeroVideo} className="flex items-center gap-2 rounded-full border border-[#f3eee4]/30 bg-[#0b0b0a]/35 px-3 py-2 font-mono-ui text-[9px] uppercase tracking-[.14em] text-[#f3eee4] backdrop-blur-md transition-colors hover:border-[#b99a63] hover:text-[#b99a63]" aria-label={heroVideoPlaying ? 'Pause intro video' : 'Play intro video'} data-testid="button-hero-video-toggle">{heroVideoPlaying ? <Pause size={12} /> : <Play size={12} fill="currentColor" />}<span className="hidden sm:inline">{heroVideoPlaying ? 'Pause' : 'Play'}</span></button><button type="button" onClick={replayHeroVideo} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#f3eee4]/30 bg-[#0b0b0a]/35 text-[#f3eee4] backdrop-blur-md transition-colors hover:border-[#b99a63] hover:text-[#b99a63]" aria-label="Replay intro video" data-testid="button-hero-video-replay"><RotateCcw size={12} /></button></div>
         <div className="relative mx-auto flex min-h-[720px] max-w-[1440px] flex-col justify-end px-5 pb-14 pt-32 md:min-h-[820px] md:px-10 md:pb-20">
-          <div className="max-w-3xl page-reveal"><p className="font-mono-ui text-[10px] uppercase tracking-[.24em] text-[#f3eee4]/65">Furniture for the everyday extraordinary</p><h1 className="mt-5 max-w-3xl font-display text-[5.6rem] leading-[.78] tracking-[-.065em] text-[#f3eee4] md:text-[10.5rem]">Make room<br /><em>for feeling.</em></h1><div className="mt-9 flex flex-wrap items-center gap-5"><Link href="/furniture" className="group flex items-center gap-3 rounded-full bg-[#0b0b0a] px-6 py-4 text-xs uppercase tracking-[.16em] text-[#f3eee4] transition-transform hover:scale-[1.03]" data-testid="link-hero-shop">Browse the collection <ArrowUpRight size={16} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></Link><button onClick={() => setShowVideo(true)} className="group flex items-center gap-3 text-xs uppercase tracking-[.16em] text-[#f3eee4]" data-testid="button-hero-film"><span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f3eee4]/40 transition-colors group-hover:bg-[#b99a63]"><Play size={13} fill="currentColor" /></span> Watch the film</button></div></div>
+          <div className="max-w-3xl page-reveal"><p className="font-mono-ui text-[10px] uppercase tracking-[.24em] text-[#f3eee4]/65">Furniture for the everyday extraordinary</p><h1 className="mt-5 max-w-3xl font-display text-[5.6rem] leading-[.78] tracking-[-.065em] text-[#f3eee4] md:text-[10.5rem]">Make room<br /><em>for feeling.</em></h1><div className="mt-9 flex flex-wrap items-center gap-5"><Link href="/furniture" className="group flex items-center gap-3 rounded-full bg-[#0b0b0a] px-6 py-4 text-xs uppercase tracking-[.16em] text-[#f3eee4] transition-transform hover:scale-[1.03]" data-testid="link-hero-shop">Browse the collection <ArrowUpRight size={16} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></Link><button onClick={() => setShowVideo(true)} className="group flex items-center gap-3 text-xs uppercase tracking-[.16em] text-[#f3eee4]" data-testid="button-hero-film"><span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f3eee4]/40 transition-colors group-hover:bg-[#b99a63]"><Play size={13} fill="currentColor" /></span> Watch the film</button><Link href="#featured" className="group flex items-center gap-2 text-xs uppercase tracking-[.16em] text-[#f3eee4]/75 transition-colors hover:text-[#b99a63]" data-testid="link-hero-scene">Explore this room <ArrowDownRight size={15} className="transition-transform group-hover:translate-y-0.5" /></Link></div></div>
           <div className="mt-20 flex items-end justify-between border-t border-[#f3eee4]/25 pt-4 text-[#f3eee4]/60 page-reveal delay-3"><span className="font-mono-ui text-[10px] uppercase tracking-[.18em]">01 / 04 — Spring edit</span><span className="hidden max-w-[170px] text-right text-xs leading-5 md:block">A collection of shapes that give the day somewhere to land.</span><ArrowDownRight size={17} />
           </div>
         </div>
@@ -521,7 +535,7 @@ function Home({ onAdd, liked, onLike, compared, onCompare }: { onAdd: (product: 
           <div className="max-w-lg md:justify-self-end"><p className="text-xl leading-relaxed text-[#f3eee4]/70">Not a showroom of perfect rooms. A considered collection of pieces that leave space for your life to happen around them.</p><div className="mt-10 flex items-center gap-4 font-mono-ui text-[10px] uppercase tracking-[.18em]"><span className="pulse-line h-px w-16 origin-left bg-[#bd8250]" /> New York / Since 2024</div></div>
         </div>
       </section>
-      <section className="bg-[#171512] px-5 pb-28 md:px-10 md:pb-40">
+      <section id="featured" className="bg-[#171512] px-5 pb-28 md:px-10 md:pb-40">
         <div className="mx-auto max-w-[1440px]"><div className="flex items-end justify-between border-b border-[#f3eee4]/20 pb-5"><div><p className="eyebrow">A closer look</p><h2 className="mt-4 font-display text-5xl tracking-[-.04em] md:text-7xl">Objects in orbit</h2></div><Link href="/furniture" className="hidden items-center gap-2 text-xs uppercase tracking-[.15em] md:flex" data-testid="link-featured-all">View all pieces <ArrowRight size={15} /></Link></div>
           <div className="mt-9 grid gap-10 md:grid-cols-[.9fr_1.1fr]">
             <div className="relative min-h-[530px] overflow-hidden rounded-[1.5rem] bg-[#292823] p-7 md:min-h-[650px]"><img src={featured.image} alt={featured.name} className="absolute inset-0 h-full w-full object-cover mix-blend-multiply opacity-75 transition-opacity duration-700" /><div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0a]/55 via-transparent to-transparent" /><div className="relative flex h-full flex-col justify-between text-[#f3eee4]"><div className="flex items-start justify-between"><span className="font-mono-ui text-[10px] uppercase tracking-[.18em]">Featured / {String(activeProduct + 1).padStart(2, '0')}</span><span className="rounded-full border border-[#f3eee4]/50 px-3 py-1 font-mono-ui text-[9px] uppercase tracking-[.15em]">Selected</span></div><div><p className="font-display text-6xl leading-[.8] md:text-8xl">{featured.name}</p><div className="mt-5 flex items-center justify-between"><p className="text-sm">{formatPrice(featured.price)} <span className="text-[#f3eee4]/60">/ {featured.material}</span></p><Link href={`/furniture/${featured.id}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#b99a63] text-[#f3eee4]" data-testid="link-featured-product"><ArrowUpRight size={17} /></Link></div></div></div></div>
