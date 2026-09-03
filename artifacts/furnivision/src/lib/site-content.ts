@@ -16,7 +16,7 @@ export type SiteContent = {
 export const defaultSiteContent: SiteContent = {
   announcement: 'White-glove delivery / Made for real rooms',
   heroEyebrow: 'Furniture for the everyday extraordinary',
-  heroTitle: 'Make room for feeling.',
+  heroTitle: 'Make room\nfor feeling.',
   heroBody: 'A considered collection of pieces that leave space for your life to happen around them.',
   heroVideo: '/assets/furnivision-intro.mp4',
   heroPoster: '/assets/hero-room.jpg',
