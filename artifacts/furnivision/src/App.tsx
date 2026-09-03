@@ -864,6 +864,7 @@ function AdminPage({ user }: { user: SessionUser | null }) {
     { label: 'Home', path: '/', description: 'Homepage hero, collections, and featured pieces.' },
     { label: 'All furniture', path: '/furniture', description: 'The complete catalog and collection filters.' },
     ...collectionPages.map((page) => ({ label: page.label, path: `/furniture/category/${page.slug}`, description: page.description })),
+    ...catalog.map((product) => ({ label: product.name, path: `/furniture/${product.id}`, description: `Product page / ${product.collection}` })),
     { label: 'Room edits', path: '/bundles', description: 'Curated furniture bundles and room combinations.' },
     { label: 'Wishlist', path: '/wishlist', description: 'Saved customer pieces.' },
     { label: 'Saved rooms', path: '/saved-rooms', description: 'Saved visualizer combinations.' },
