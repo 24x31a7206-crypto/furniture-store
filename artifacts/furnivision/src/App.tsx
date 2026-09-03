@@ -747,6 +747,26 @@ function asCatalogProduct(product: Product): CatalogProduct {
   return { ...product, stock: productMeta(product).stock };
 }
 
+function AdminSignInPage() {
+  const [, setLocation] = useLocation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setMessage('');
+    const result = await signIn(email, password);
+    setBusy(false);
+    if (result.user) setLocation('/admin');
+    else setMessage(result.error || 'Please try again.');
+  };
+
+  return <main className="min-h-screen bg-[#b99a63] px-5 pb-28 pt-32 md:px-10 md:pt-44"><div className="mx-auto grid max-w-[1180px] gap-12 lg:grid-cols-[1fr_420px] lg:items-end"><div><p className="eyebrow">FurniVision / Staff access</p><h1 className="mt-5 font-display text-8xl leading-[.76] tracking-[-.06em] md:text-[10rem]">Run the<br /><em>whole room.</em></h1><p className="mt-7 max-w-sm text-sm leading-6 text-[#f3eee4]/65">Sign in with the Firebase account that has the admin claim to manage products, homepage content, and media.</p></div><div className="rounded-[1.5rem] bg-[#171512] p-7 text-[#f3eee4] md:p-8"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-[#bd8250]">Admin sign in</p>{!firebaseEnabled && <p className="mt-5 rounded-xl bg-[#26231f] p-3 text-xs leading-5 text-[#f3eee4]/65">Firebase is not configured. Add the six VITE_FIREBASE variables in Render before signing in.</p>}<form onSubmit={submit} className="mt-7 grid gap-6"><label className="text-xs uppercase tracking-[.13em]">Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full border-b border-[#f3eee4]/25 bg-transparent py-3 text-base outline-none focus:border-[#bd8250]" autoComplete="email" data-testid="input-admin-email" /></label><label className="text-xs uppercase tracking-[.13em]">Password<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full border-b border-[#f3eee4]/25 bg-transparent py-3 text-base outline-none focus:border-[#bd8250]" autoComplete="current-password" data-testid="input-admin-password" /></label>{message && <p className="text-sm text-[#bd8250]" role="alert">{message}</p>}<button disabled={busy || !firebaseEnabled} className="flex items-center justify-center gap-2 rounded-full bg-[#0b0b0a] py-4 text-xs uppercase tracking-[.15em] text-[#f3eee4] disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-admin-sign-in">{busy ? 'Signing in…' : 'Sign in as admin'} <ArrowUpRight size={15} /></button></form><button disabled={busy || !firebaseEnabled} onClick={async () => { setBusy(true); setMessage(''); const result = await signInWithGoogle(); setBusy(false); if (result.user) setLocation('/admin'); else setMessage(result.error || 'Please try again.'); }} className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-[#f3eee4]/20 py-4 text-xs uppercase tracking-[.15em] disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-admin-google-sign-in">Continue with Google</button><Link href="/account" className="mt-6 block text-center text-xs text-[#f3eee4]/55 underline decoration-[#bd8250] underline-offset-4" data-testid="link-admin-customer-account">Customer account sign in</Link></div></div></main>;
+}
+
 function AdminPage({ user }: { user: SessionUser | null }) {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
@@ -831,7 +851,7 @@ function AdminPage({ user }: { user: SessionUser | null }) {
   };
 
   if (!firebaseEnabled) return <main className="min-h-screen bg-[#171512] px-5 pb-28 pt-32 md:px-10 md:pt-44"><div className="mx-auto max-w-[900px]"><p className="eyebrow">FurniVision / Admin</p><h1 className="mt-5 font-display text-8xl leading-[.76] tracking-[-.06em]">Admin<br /><em>offline.</em></h1><p className="mt-8 max-w-lg text-sm leading-6 text-[#f3eee4]/65">Firebase is not configured, so staff access, uploads, and publishing are unavailable. Add the variables from .env.example, then refresh this page.</p><Link href="/account" className="mt-8 inline-flex rounded-full bg-[#0b0b0a] px-6 py-4 text-xs uppercase tracking-[.15em] text-[#f3eee4]" data-testid="link-admin-account">Open account setup</Link></div></main>;
-  if (!user) return <main className="min-h-screen bg-[#171512] px-5 pb-28 pt-32 md:px-10 md:pt-44"><div className="mx-auto max-w-[900px]"><p className="eyebrow">FurniVision / Admin</p><h1 className="mt-5 font-display text-8xl leading-[.76] tracking-[-.06em]">Sign in<br /><em>first.</em></h1><p className="mt-8 max-w-lg text-sm leading-6 text-[#f3eee4]/65">The content studio is restricted to authenticated staff accounts.</p><Link href="/account" className="mt-8 inline-flex rounded-full bg-[#0b0b0a] px-6 py-4 text-xs uppercase tracking-[.15em] text-[#f3eee4]" data-testid="link-admin-sign-in">Go to sign in</Link></div></main>;
+  if (!user) return <AdminSignInPage />;
   if (allowed === null) return <main className="flex min-h-screen items-center justify-center bg-[#b99a63] px-5 pt-24"><p className="font-mono-ui text-[10px] uppercase tracking-[.16em]">Checking staff access…</p></main>;
   if (!allowed) return <main className="min-h-screen bg-[#0b0b0a] px-5 pb-28 pt-32 text-[#f3eee4] md:px-10 md:pt-44"><div className="mx-auto max-w-[900px]"><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[#b99a63]">FurniVision / Admin</p><h1 className="mt-5 font-display text-8xl leading-[.76] tracking-[-.06em]">Access<br /><em>denied.</em></h1><p className="mt-8 max-w-lg text-sm leading-6 text-[#f3eee4]/60">Your account does not have the Firebase <code className="text-[#b99a63]">admin</code> custom claim required to manage the storefront.</p><Link href="/account" className="mt-8 inline-flex rounded-full bg-[#b99a63] px-6 py-4 text-xs uppercase tracking-[.15em] text-[#f3eee4]" data-testid="link-admin-access-account">Return to account</Link></div></main>;
 
