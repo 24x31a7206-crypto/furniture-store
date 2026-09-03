@@ -33,13 +33,19 @@ than committing a `.env` file:
 
 The app initializes Firebase only when all six values are present.
 
-## 3. Security model
+## 3. First-user ownership and security model
 
-- A signed-in user can read and write only their own `users/{uid}/...` data.
-- Public catalog reads are allowed from `products`.
-- Product writes require an `admin` custom claim.
+- The first account that successfully signs in is atomically recorded as the storefront owner.
+- Only that owner can publish products, homepage content, and site media.
+- The owner record lives at `adminConfig/primary` and cannot be replaced or deleted from the public app.
+- Regular signed-in users can read and write only their own `users/{uid}/...` data.
 - Review creation and edits are scoped to the signed-in review owner.
 - Room uploads are scoped to the owner, limited to images under 10 MB.
+
+The first person to sign in becomes the admin, so make sure the intended owner
+is the first account used after the rules are deployed. Deploy the rules with:
+
+`firebase deploy --only firestore:rules,storage`
 
 ## 4. Payments
 
