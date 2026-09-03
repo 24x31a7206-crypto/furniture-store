@@ -7,7 +7,8 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { auth, firebaseEnabled } from './firebase';
+import { doc, getDoc, runTransaction } from 'firebase/firestore';
+import { auth, db, firebaseEnabled } from './firebase';
 
 export type AuthResult = {
   user: User | null;
@@ -59,10 +60,31 @@ export async function signOutUser() {
   if (auth && firebaseEnabled) await signOut(auth);
 }
 
+const ownerRef = () => db ? doc(db, 'adminConfig', 'primary') : null;
+
+export async function ensureFirstUserAdmin(user: User) {
+  if (!db || !firebaseEnabled) return false;
+  const ref = doc(db, 'adminConfig', 'primary');
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists()) {
+      transaction.set(ref, { uid: user.uid, createdAt: new Date().toISOString() });
+    }
+  });
+  const snapshot = await getDoc(ref);
+  return snapshot.exists() && snapshot.data().uid === user.uid;
+}
+
 export async function isCurrentUserAdmin() {
-  if (!auth?.currentUser || !firebaseEnabled) return false;
-  const token = await auth.currentUser.getIdTokenResult();
-  return token.claims.admin === true;
+  if (!auth?.currentUser || !db || !firebaseEnabled) return false;
+  const ref = ownerRef();
+  if (!ref) return false;
+  try {
+    const snapshot = await getDoc(ref);
+    return snapshot.exists() && snapshot.data().uid === auth.currentUser.uid;
+  } catch {
+    return false;
+  }
 }
 
 export function subscribeToAuth(callback: (user: User | null) => void) {
