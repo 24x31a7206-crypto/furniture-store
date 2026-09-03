@@ -517,3 +517,107 @@ input:focus, select:focus, textarea:focus {
   button:active { transform: none; }
   header form:focus-within input { width: 9rem; }
 }
+
+
+/* Advanced luxury composition — stronger hierarchy without visual noise */
+:where(h1, h2, h3, h4) { text-wrap: balance; }
+.eyebrow {
+  color: var(--fv-brass) !important;
+  font-family: var(--app-font-mono);
+  font-size: .63rem;
+  letter-spacing: .2em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+main > section:first-of-type {
+  min-height: min(56rem, 100svh);
+  background-color: #24231f;
+}
+main > section:first-of-type video {
+  mix-blend-mode: normal;
+  opacity: .58;
+  filter: brightness(.72) saturate(.72) contrast(1.08);
+  transform: scale(1.025);
+  transition: opacity 1.2s ease, filter 1.2s ease, transform 1.4s var(--fv-ease);
+}
+main > section:first-of-type:hover video {
+  opacity: .64;
+  filter: brightness(.78) saturate(.82) contrast(1.08);
+  transform: scale(1.04);
+}
+main > section:first-of-type > div:first-of-type {
+  background: linear-gradient(90deg, rgba(11,11,10,.68), rgba(11,11,10,.12) 58%, rgba(185,154,99,.1));
+}
+main > section:first-of-type h1 {
+  color: #f3eee4;
+  text-shadow: 0 12px 42px rgba(0, 0, 0, .28);
+}
+main > section:first-of-type h1 em { color: #c5a975; }
+
+/* Large sections share one measured rhythm and a discreet edge highlight. */
+main > section:not(:first-of-type) {
+  position: relative;
+  overflow: clip;
+}
+main > section:not(:first-of-type)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .38;
+  background: linear-gradient(115deg, rgba(255,255,255,.025), transparent 28%, transparent 72%, rgba(185,154,99,.035));
+}
+main > section:not(:first-of-type) > * { position: relative; }
+
+/* Product discovery gets a quieter, more deliberate scan path. */
+[data-testid^="card-product-"] { animation: card-arrive .75s var(--fv-ease) both; }
+[data-testid^="card-product-"]:nth-child(2) { animation-delay: .06s; }
+[data-testid^="card-product-"]:nth-child(3) { animation-delay: .12s; }
+[data-testid^="card-product-"]:nth-child(4) { animation-delay: .18s; }
+[data-testid^="link-product-name-"] { transition: color .3s ease, letter-spacing .45s var(--fv-ease); }
+[data-testid^="link-product-name-"]:hover { color: var(--fv-brass); letter-spacing: -.015em; }
+@keyframes card-arrive { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Make selected finishes feel like deliberate choices. */
+[data-testid^="button-variant-"] {
+  min-height: 2.75rem;
+  border-color: rgba(243, 238, 228, .18);
+  background: rgba(243, 238, 228, .025);
+  transition: background .35s ease, border-color .35s ease, color .35s ease, transform .35s var(--fv-ease);
+}
+[data-testid^="button-variant-"]:hover {
+  border-color: rgba(185, 154, 99, .7);
+  background: rgba(185, 154, 99, .1);
+  transform: translateY(-2px);
+}
+
+/* Every primary action has a consistent luxury affordance. */
+[data-testid^="button-"]:not([aria-label^="Decrease"]):not([aria-label^="Increase"]),
+[data-testid^="link-"] {
+  -webkit-tap-highlight-color: transparent;
+}
+[data-testid^="button-"]:focus-visible, [data-testid^="link-"]:focus-visible {
+  outline: 1px solid var(--fv-brass);
+  outline-offset: 4px;
+}
+
+/* Premium bag and comparison surfaces. */
+.fixed.inset-0.z-\[70\] > div, .fixed.inset-0.z-\[90\] > div {
+  border: 1px solid rgba(243, 238, 228, .12);
+  box-shadow: 0 28px 90px rgba(0,0,0,.5);
+}
+
+/* Mobile composition: breathing room first, then conversion. */
+@media (max-width: 767px) {
+  main > section:first-of-type { min-height: 100svh; }
+  main > section:first-of-type video { opacity: .48; }
+  main > section:first-of-type > div:last-child { padding-bottom: 1.5rem; }
+  main > section:first-of-type h1 { max-width: 8ch; font-size: clamp(4rem, 18vw, 6.2rem); }
+  [data-testid^="card-product-"] { animation-delay: 0s !important; }
+  [data-testid^="button-variant-"] { min-height: 3rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-testid^="card-product-"] { animation: none; }
+  main > section:first-of-type video, main > section:first-of-type:hover video { transform: none; transition: none; }
+}
