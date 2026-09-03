@@ -2,6 +2,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    match /site/{fileName} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.token.admin == true
+        && request.resource.size < 60 * 1024 * 1024
+        && request.resource.contentType.matches('(image|video)/.*');
+      allow delete: if request.auth != null
+        && request.auth.token.admin == true;
+    }
+
     match /users/{userId}/rooms/{fileName} {
       allow read, write: if request.auth != null
         && request.auth.uid == userId
