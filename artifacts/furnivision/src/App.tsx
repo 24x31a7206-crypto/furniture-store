@@ -872,6 +872,14 @@ function AccountPage({ user, orders }: { user: SessionUser | null; orders: Order
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!user) { setIsAdmin(false); return () => { active = false; }; }
+    void isCurrentUserAdmin().then((value) => { if (active) setIsAdmin(value); }).catch(() => { if (active) setIsAdmin(false); });
+    return () => { active = false; };
+  }, [user?.uid]);
 
   if (user) {
     return (
@@ -880,7 +888,7 @@ function AccountPage({ user, orders }: { user: SessionUser | null; orders: Order
           <p className="eyebrow">FurniVision / Your account</p>
           <div className="mt-5 flex flex-col justify-between gap-8 border-b border-[#f3eee4]/20 pb-10 md:flex-row md:items-end">
             <div><h1 className="font-display text-8xl leading-[.76] tracking-[-.06em] md:text-[10rem]">Make room<br /><em>for you.</em></h1><p className="mt-6 text-sm text-[#f3eee4]/60">{user.email}</p></div>
-            <div className="flex flex-wrap gap-3 self-start"><Link href="/admin" className="rounded-full border border-[#f3eee4]/20 px-5 py-3 text-xs uppercase tracking-[.15em]" data-testid="link-account-admin">Admin workspace</Link><button onClick={async () => { await signOutUser(); setLocation('/'); }} className="rounded-full border border-[#f3eee4]/20 px-5 py-3 text-xs uppercase tracking-[.15em]" data-testid="button-sign-out">Sign out</button></div>
+            <div className="flex flex-wrap gap-3 self-start">{isAdmin && <Link href="/admin" className="rounded-full border border-[#f3eee4]/20 px-5 py-3 text-xs uppercase tracking-[.15em]" data-testid="link-account-admin">Admin workspace</Link>}<button onClick={async () => { await signOutUser(); setLocation('/'); }} className="rounded-full border border-[#f3eee4]/20 px-5 py-3 text-xs uppercase tracking-[.15em]" data-testid="button-sign-out">Sign out</button></div>
           </div>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             <Link href="/wishlist" className="rounded-[1.25rem] bg-[#b99a63] p-6 transition-transform hover:-translate-y-1" data-testid="link-account-wishlist"><Heart size={20} /><p className="mt-10 font-display text-4xl">Saved pieces</p><p className="mt-2 text-sm text-[#f3eee4]/60">Your considered shortlist.</p></Link>
