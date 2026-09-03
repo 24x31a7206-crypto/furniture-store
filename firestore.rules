@@ -2,20 +2,37 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isStorefrontOwner() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/adminConfig/primary)
+        && get(/databases/$(database)/documents/adminConfig/primary).data.uid == request.auth.uid;
+    }
+
+    match /adminConfig/primary {
+      // Anyone authenticated may safely check an empty owner slot. Once claimed,
+      // only the owner can read it, and nobody can replace or delete it from the client.
+      allow read: if request.auth != null
+        && (!exists(/databases/$(database)/documents/adminConfig/primary)
+          || resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null
+        && !exists(/databases/$(database)/documents/adminConfig/primary)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     match /users/{userId}/{collectionName}/{documentId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /products/{productId} {
       allow read: if true;
-      allow write: if request.auth != null
-        && request.auth.token.admin == true;
+      allow write: if isStorefrontOwner();
     }
 
     match /siteContent/{documentId} {
       allow read: if true;
-      allow write: if request.auth != null
-        && request.auth.token.admin == true;
+      allow write: if isStorefrontOwner();
     }
 
     match /reviews/{reviewId} {
