@@ -800,6 +800,7 @@ function AdminPage({ user }: { user: SessionUser | null }) {
       const saved = { ...draft, id };
       setCatalog((items) => editingId ? items.map((item) => item.id === id ? saved : item) : [saved, ...items]);
       setMessage(editingId ? 'Product updated and published.' : 'Product created and published.');
+      window.dispatchEvent(new Event('furnivision-catalog-change'));
       setEditingId(id);
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not save this product.'); }
     finally { setSaving(false); }
@@ -807,7 +808,7 @@ function AdminPage({ user }: { user: SessionUser | null }) {
   const remove = async (id: string) => {
     if (!window.confirm('Delete this product permanently?')) return;
     setMessage('');
-    try { await deleteCatalogProduct(id); setCatalog((items) => items.filter((item) => item.id !== id)); if (editingId === id) beginNew(); setMessage('Product deleted.'); }
+    try { await deleteCatalogProduct(id); setCatalog((items) => items.filter((item) => item.id !== id)); window.dispatchEvent(new Event('furnivision-catalog-change')); if (editingId === id) beginNew(); setMessage('Product deleted.'); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Could not delete this product.'); }
   };
   const uploadAsset = async (field: 'image' | 'heroVideo' | 'heroPoster', file?: File) => {
@@ -923,7 +924,22 @@ function App() {
   const [orders, setOrders] = useState<Order[]>(() => readStored('furnivision-orders', []));
   const [userDataReady, setUserDataReady] = useState(false);
   const [location, setLocation] = useLocation();
+  const [, setCatalogVersion] = useState(0);
   useEffect(() => { document.title = 'FurniVision — Furniture for the everyday extraordinary'; }, []);
+  useEffect(() => {
+    let active = true;
+    const refreshCatalog = async () => {
+      if (!firebaseEnabled) return;
+      const remoteCatalog = await loadCatalog();
+      if (!active || !remoteCatalog || remoteCatalog.length === 0) return;
+      products.splice(0, products.length, ...remoteCatalog.map((item) => ({ ...item })));
+      setCatalogVersion((version) => version + 1);
+    };
+    void refreshCatalog().catch(() => undefined);
+    const handleCatalogChange = () => { void refreshCatalog().catch(() => undefined); };
+    window.addEventListener('furnivision-catalog-change', handleCatalogChange);
+    return () => { active = false; window.removeEventListener('furnivision-catalog-change', handleCatalogChange); };
+  }, []);
   useEffect(() => subscribeToAuth((nextUser) => {
     setUser(nextUser ? { uid: nextUser.uid, email: nextUser.email, displayName: nextUser.displayName } : null);
   }), []);
