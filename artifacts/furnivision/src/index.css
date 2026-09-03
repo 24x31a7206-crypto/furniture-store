@@ -731,3 +731,38 @@ main > section:first-of-type:hover .hero-intro-video {
   [data-testid="section-recently-viewed"] { margin-top: 4rem; }
   [data-testid="section-recently-viewed"] h2 { font-size: 3rem !important; }
 }
+
+
+/* Dense catalog layout — more products visible, still unmistakably FurniVision */
+.catalog-grid {
+  align-items: start;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 1200px;
+}
+.catalog-grid [data-testid^="card-product-"] { min-width: 0; }
+.catalog-grid [data-testid^="card-product-"] .image-reveal { box-shadow: 0 10px 32px rgba(0, 0, 0, .2); }
+.catalog-grid [data-testid^="card-product-"] .card-depth { gap: .65rem; }
+.catalog-count { color: rgba(243, 238, 228, .56); }
+.catalog-pagination button:not(:disabled):hover { background: rgba(185, 154, 99, .1); }
+.catalog-pagination button[aria-current="page"] { box-shadow: 0 8px 22px rgba(185, 154, 99, .18); }
+
+@media (min-width: 1280px) {
+  .catalog-grid { column-gap: 1.25rem; row-gap: 4rem; }
+  .catalog-grid [data-testid^="card-product-"] .image-reveal { border-radius: 1rem; }
+}
+
+@media (max-width: 767px) {
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    column-gap: .8rem !important;
+    row-gap: 2.75rem !important;
+  }
+  .catalog-grid [data-testid^="card-product-"] .card-depth { display: block; padding-top: .7rem; }
+  .catalog-grid [data-testid^="card-product-"] .card-depth > div:last-child { display: flex; align-items: center; justify-content: space-between; margin-top: .75rem; text-align: left; }
+  .catalog-grid [data-testid^="card-product-"] .card-depth > div:last-child > div { justify-content: flex-start; margin-top: 0; }
+  .catalog-grid [data-testid^="card-product-"] [data-testid^="link-product-name-"] { max-width: 9ch; font-size: 1.65rem !important; }
+  .catalog-grid [data-testid^="card-product-"] [data-testid^="button-"] { min-width: 2.15rem; min-height: 2.15rem; padding: .45rem; }
+  .catalog-grid [data-testid^="card-product-"] .image-reveal span { font-size: 8px; }
+  .catalog-pagination { margin-top: 2.5rem; }
+  .catalog-pagination button { min-height: 2.75rem; }
+}
