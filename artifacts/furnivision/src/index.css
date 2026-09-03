@@ -413,3 +413,107 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (prefers-reduced-motion: reduce) {
   .product-purchase-bar { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
+
+
+/* Luxury UX polish — clarity, tactility, and responsive calm */
+:root {
+  --fv-brass: #b99a63;
+  --fv-copper: #bd8250;
+  --fv-ivory: #f3eee4;
+  --fv-night: #0b0b0a;
+  --fv-panel: #171512;
+}
+
+/* Make the interface feel intentional at every scroll position. */
+html { scrollbar-color: #6d5839 #0b0b0a; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 9px; }
+::-webkit-scrollbar-track { background: #0b0b0a; }
+::-webkit-scrollbar-thumb { border: 2px solid #0b0b0a; border-radius: 999px; background: #6d5839; }
+::placeholder { opacity: 1; }
+
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:active { transform: scale(.98); }
+button:disabled { cursor: not-allowed; opacity: .5; }
+
+/* Editorial header and mobile menu */
+header > div { box-shadow: 0 10px 36px rgba(0, 0, 0, .12); }
+header nav a, header nav button { letter-spacing: .12em; text-transform: uppercase; font-size: .67rem; }
+header form { transition: border-color .35s ease, width .45s var(--fv-ease); }
+header form:focus-within { border-color: rgba(185, 154, 99, .7); }
+header form:focus-within input { width: 11.5rem; }
+.fixed.inset-0.z-\[80\] { background: #11100e !important; color: var(--fv-ivory); }
+.fixed.inset-0.z-\[80\] nav a { transition: color .3s ease, padding-left .45s var(--fv-ease); }
+.fixed.inset-0.z-\[80\] nav a:hover { padding-left: .4rem; color: var(--fv-brass); }
+
+/* Stronger visual hierarchy on cards and media surfaces. */
+.image-reveal { background: #2a2823; isolation: isolate; }
+.image-reveal img { backface-visibility: hidden; }
+.image-reveal:hover img { filter: brightness(1.05) saturate(1.08); }
+.tilt-card .image-reveal span { transition: transform .45s var(--fv-ease), opacity .35s ease; }
+.tilt-card:hover .image-reveal span { transform: translateY(-2px); }
+[data-testid^="card-product-"] a:focus-visible .image-reveal { outline: 1px solid var(--fv-brass); outline-offset: 5px; }
+[data-testid^="card-product-"] [data-testid^="button-"] { min-width: 2.5rem; min-height: 2.5rem; }
+
+/* Product detail gallery: make the main visual read like an object, not a thumbnail. */
+.image-reveal.perspective { box-shadow: 0 26px 90px rgba(0, 0, 0, .32); }
+.image-reveal.perspective::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,.1), transparent 24%, transparent 78%, rgba(0,0,0,.16));
+  mix-blend-mode: screen;
+}
+.image-reveal.perspective > img { transform-origin: center center; cursor: grab; }
+.image-reveal.perspective:active > img { cursor: grabbing; }
+
+/* Forms should feel quiet but unmistakably interactive. */
+input, select, textarea {
+  color: var(--fv-ivory);
+  caret-color: var(--fv-brass);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(185, 154, 99, .72) !important;
+  box-shadow: 0 0 0 3px rgba(185, 154, 99, .12);
+}
+[data-testid="button-check-delivery"]:hover { box-shadow: 0 8px 22px rgba(185, 154, 99, .22); }
+[data-testid="button-product-add-to-bag"], [data-testid="link-hero-shop"] {
+  background: var(--fv-brass) !important;
+  color: var(--fv-night) !important;
+}
+[data-testid="button-product-add-to-bag"]:hover, [data-testid="link-hero-shop"]:hover {
+  background: #cfb27a !important;
+  box-shadow: 0 12px 32px rgba(185, 154, 99, .2);
+}
+
+/* Clear state change for wishlist, compare, bag, and menu actions. */
+[data-testid^="button-wishlist-"]:hover, [data-testid="button-product-wishlist"]:hover {
+  border-color: var(--fv-copper) !important;
+  color: var(--fv-copper);
+}
+[data-testid="button-open-cart"] { transition: color .3s ease, transform .3s var(--fv-ease); }
+[data-testid="button-open-cart"]:hover { color: var(--fv-brass); transform: translateY(-1px); }
+
+/* Checkout readability and confidence cues. */
+[data-testid="button-checkout"] { min-height: 3.25rem; }
+[data-testid="button-checkout"]:hover { background: var(--fv-brass) !important; color: var(--fv-night) !important; }
+
+/* Product, review, and delivery blocks settle in as one system. */
+[data-testid="product-review-summary"] span, [data-testid="delivery-estimator"] span { line-height: 1.3; }
+[data-testid="section-recently-viewed"] a { transition: color .3s ease, transform .45s var(--fv-ease); }
+[data-testid="section-recently-viewed"] a:hover { color: var(--fv-brass); transform: translateY(-3px); }
+
+/* Prevent motion from compromising usability. */
+@media (max-width: 767px) {
+  body { font-size: .95rem; }
+  header > div { box-shadow: 0 8px 28px rgba(0, 0, 0, .18); }
+  .image-reveal.perspective > img { cursor: default; }
+  [data-testid="button-product-add-to-bag"] { min-height: 3rem; }
+  [data-testid="section-recently-viewed"] h2 { font-size: 3.2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button:active { transform: none; }
+  header form:focus-within input { width: 9rem; }
+}
