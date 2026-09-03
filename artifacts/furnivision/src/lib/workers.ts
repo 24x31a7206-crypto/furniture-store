@@ -88,8 +88,12 @@ export async function loadWorkers(): Promise<WorkerProfile[]> {
 
 export async function loadCurrentWorker(): Promise<WorkerProfile | null> {
   if (!db || !auth?.currentUser || !firebaseEnabled) return null;
-  const snapshot = await getDoc(doc(db, 'workers', auth.currentUser.uid));
-  return snapshot.exists() ? workerFromData(snapshot.id, snapshot.data()) : null;
+  try {
+    const snapshot = await getDoc(doc(db, 'workers', auth.currentUser.uid));
+    return snapshot.exists() ? workerFromData(snapshot.id, snapshot.data()) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function isCurrentUserWorker() {
