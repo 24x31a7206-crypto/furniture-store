@@ -381,3 +381,35 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 767px) {
   body { background-color: #0b0b0a; }
 }
+
+
+/* Purchase confidence controls */
+.product-purchase-bar {
+  transition: background .35s ease, box-shadow .35s ease, transform .35s var(--fv-ease);
+}
+[data-testid="delivery-estimator"], [data-testid="product-review-summary"] {
+  box-shadow: inset 0 1px 0 rgba(243, 238, 228, .04), 0 14px 40px rgba(0, 0, 0, .14);
+}
+[data-testid="input-delivery-postcode"]:focus {
+  box-shadow: 0 0 0 3px rgba(185, 154, 99, .14);
+}
+@media (max-width: 767px) {
+  .product-purchase-bar {
+    position: sticky;
+    bottom: .75rem;
+    z-index: 30;
+    margin-left: -.35rem;
+    margin-right: -.35rem;
+    padding: .45rem;
+    border: 1px solid rgba(243, 238, 228, .12);
+    border-radius: 999px;
+    background: rgba(23, 21, 18, .82);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, .42);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .product-purchase-bar button[data-testid="button-product-add-to-bag"] { min-height: 3rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-purchase-bar { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
