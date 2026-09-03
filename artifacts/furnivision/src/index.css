@@ -621,3 +621,32 @@ main > section:not(:first-of-type) > * { position: relative; }
   [data-testid^="card-product-"] { animation: none; }
   main > section:first-of-type video, main > section:first-of-type:hover video { transform: none; transition: none; }
 }
+
+
+/* Cinematic intro video — the hero should feel like a moving editorial cover */
+main > section:first-of-type .hero-intro-video {
+  object-position: 50% 50%;
+  opacity: .6;
+  filter: brightness(.66) saturate(.78) contrast(1.12);
+  transform: scale(1.035);
+  transition: opacity 1.1s ease, filter 1.1s ease, transform 1.6s var(--fv-ease);
+}
+main > section:first-of-type:hover .hero-intro-video {
+  opacity: .68;
+  filter: brightness(.72) saturate(.88) contrast(1.12);
+  transform: scale(1.055);
+}
+.hero-intro-overlay {
+  background: linear-gradient(90deg, rgba(11,11,10,.76) 0%, rgba(11,11,10,.3) 46%, rgba(11,11,10,.42) 100%) !important;
+}
+@media (max-width: 767px) {
+  main > section:first-of-type .hero-intro-video {
+    opacity: .5;
+    filter: brightness(.6) saturate(.72) contrast(1.1);
+    transform: scale(1.025);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  main > section:first-of-type .hero-intro-video,
+  main > section:first-of-type:hover .hero-intro-video { opacity: .34; transform: none; transition: none; }
+}
