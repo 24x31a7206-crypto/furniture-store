@@ -30,4 +30,4 @@ if (hasConfig) {
   storage = getStorage(app);
 }
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, config };
