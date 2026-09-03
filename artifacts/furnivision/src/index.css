@@ -668,3 +668,66 @@ main > section:first-of-type:hover .hero-intro-video {
 @media (prefers-reduced-motion: reduce) {
   .hero-video-controls button { transition: none; }
 }
+
+
+/* Mobile-first correction — preserve the desktop art direction without shrinking it blindly */
+@media (max-width: 767px) {
+  html, body { max-width: 100%; overflow-x: hidden; }
+  body { min-width: 0; }
+  main { width: 100%; max-width: 100%; overflow: hidden; }
+  main > section { padding-left: 1rem !important; padding-right: 1rem !important; }
+  main h1 {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: clamp(3.35rem, 17vw, 5.2rem) !important;
+    line-height: .84 !important;
+  }
+  main h2 {
+    max-width: 100%;
+    font-size: clamp(2.75rem, 12vw, 4.1rem) !important;
+    line-height: .9 !important;
+  }
+  main h3 { font-size: clamp(1.9rem, 8vw, 3rem) !important; line-height: .95 !important; }
+  main p { max-width: 100%; }
+
+  /* Keep the hero cinematic, but stop the title and controls fighting for space. */
+  main > section:first-of-type { min-height: 100svh; padding-top: 5.5rem !important; }
+  main > section:first-of-type > div:not(.hero-video-controls) { padding-left: 0 !important; padding-right: 0 !important; }
+  main > section:first-of-type h1 { max-width: 7.5ch; font-size: clamp(3.8rem, 18vw, 6rem) !important; }
+  main > section:first-of-type .hero-intro-video { object-position: 57% center; }
+  main > section:first-of-type .hero-intro-overlay { background: linear-gradient(180deg, rgba(11,11,10,.28), rgba(11,11,10,.1) 28%, rgba(11,11,10,.78) 88%, rgba(11,11,10,.92)) !important; }
+  main > section:first-of-type .hero-video-controls { bottom: 1rem; right: 1rem; }
+  main > section:first-of-type .hero-video-controls button { min-height: 2.35rem; }
+  main > section:first-of-type .hero-scene-link { flex-basis: 100%; }
+
+  /* Desktop-sized editorial image blocks become usable mobile compositions. */
+  [class~="min-h-[720px]"] { min-height: 100svh !important; }
+  [class~="min-h-[530px]"] { min-height: 21rem !important; }
+  [class~="min-h-[430px]"] { min-height: 20rem !important; }
+  [class~="min-h-[650px]"] { min-height: 22rem !important; }
+  main > section img { max-width: 100%; }
+  .image-reveal { border-radius: 1rem; }
+  .image-reveal.perspective { min-height: 20rem; }
+  .image-reveal.perspective > img { min-height: 20rem !important; object-position: center; }
+
+  /* Cards stay readable when product names and prices compete for width. */
+  [data-testid^="card-product-"] { min-width: 0; }
+  [data-testid^="card-product-"] .card-depth { min-width: 0; gap: .65rem; }
+  [data-testid^="card-product-"] .card-depth > div:first-child { min-width: 0; flex: 1 1 auto; }
+  [data-testid^="card-product-"] [data-testid^="link-product-name-"] { display: block; max-width: 10ch; font-size: 2rem !important; line-height: .9; }
+  [data-testid^="card-product-"] .card-depth > div:last-child { flex: 0 0 auto; }
+  [data-testid^="card-product-"] .image-reveal span { max-width: calc(100% - 2rem); }
+
+  /* Inputs stay at readable size and never trigger iOS zoom. */
+  input, select, textarea { max-width: 100%; font-size: 16px !important; }
+  .product-purchase-bar { gap: .4rem; }
+  .product-purchase-bar > div { flex: 0 0 auto; }
+  .product-purchase-bar [data-testid="button-product-add-to-bag"] { min-width: 0; padding-left: 1rem; padding-right: 1rem; }
+
+  /* Give the mobile menu and floating surfaces a clean edge-to-edge rhythm. */
+  .fixed.inset-0.z-\[80\] { padding: 1rem !important; }
+  .fixed.inset-0.z-\[80\] nav { margin-top: 4rem; font-size: clamp(2.8rem, 12vw, 4.5rem); line-height: .9; }
+  .fixed.inset-0.z-\[80\] .font-display { max-width: 100%; }
+  [data-testid="section-recently-viewed"] { margin-top: 4rem; }
+  [data-testid="section-recently-viewed"] h2 { font-size: 3rem !important; }
+}
