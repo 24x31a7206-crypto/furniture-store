@@ -207,6 +207,8 @@ const products: Product[] = [
   },
 ];
 
+const baseProducts = products.map((product) => ({ ...product }));
+
 const formatPrice = (value: number) => `$${value.toLocaleString('en-US')}`;
 
 const productMeta = (product: Product) => ({
@@ -754,6 +756,16 @@ function asCatalogProduct(product: Product): CatalogProduct {
   return { ...product, stock: productMeta(product).stock };
 }
 
+function mergeCatalogProducts(remoteCatalog: CatalogProduct[] | null) {
+  const defaults = baseProducts.map(asCatalogProduct);
+  const remoteById = new Map((remoteCatalog || []).map((product) => [product.id, product]));
+  const defaultIds = new Set(defaults.map((product) => product.id));
+  return [
+    ...defaults.map((product) => ({ ...product, ...remoteById.get(product.id) })),
+    ...(remoteCatalog || []).filter((product) => !defaultIds.has(product.id)),
+  ];
+}
+
 function AdminSignInPage() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState('');
@@ -974,7 +986,7 @@ function AdminPage({ user }: { user: SessionUser | null }) {
       if (!isAdmin) return;
        const [remoteCatalog, remoteContent, remoteOrders, remoteWorkers] = await Promise.all([loadCatalog(), loadSiteContent(), loadAllOrders(), loadWorkers()]);
       if (!active) return;
-      setCatalog(remoteCatalog && remoteCatalog.length > 0 ? remoteCatalog : products.map(asCatalogProduct));
+       setCatalog(mergeCatalogProducts(remoteCatalog));
       if (remoteContent) setSiteDraft(remoteContent);
        setOrders(remoteOrders);
        setWorkers(remoteWorkers);
@@ -999,8 +1011,18 @@ function AdminPage({ user }: { user: SessionUser | null }) {
     event.preventDefault();
     setSaving(true); setMessage('');
     try {
-      const id = await saveCatalogProduct(editingId ? { ...draft, id: editingId } : draft);
-      const saved = { ...draft, id };
+      const productDraft = {
+        ...draft,
+        name: draft.name.trim(),
+        collection: draft.collection.trim(),
+        material: draft.material.trim(),
+        image: draft.image.trim(),
+        description: draft.description.trim(),
+        dimensions: draft.dimensions.trim(),
+        badge: draft.badge?.trim() || '',
+      };
+      const id = await saveCatalogProduct(editingId ? { ...productDraft, id: editingId } : productDraft);
+      const saved = { ...productDraft, id };
       setCatalog((items) => editingId ? items.map((item) => item.id === id ? saved : item) : [saved, ...items]);
       setMessage(editingId ? 'Product updated and published.' : 'Product created and published.');
       window.dispatchEvent(new Event('furnivision-catalog-change'));
@@ -1278,7 +1300,7 @@ function App() {
       if (!firebaseEnabled) return;
       const remoteCatalog = await loadCatalog();
       if (!active || !remoteCatalog || remoteCatalog.length === 0) return;
-      products.splice(0, products.length, ...remoteCatalog.map((item) => ({ ...item })));
+      products.splice(0, products.length, ...mergeCatalogProducts(remoteCatalog));
       setCatalogVersion((version) => version + 1);
     };
     void refreshCatalog().catch(() => undefined);

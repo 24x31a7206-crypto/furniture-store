@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth'
 import {
   arrayUnion,
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -154,6 +155,8 @@ export async function loadAssignedOrders(workerId: string): Promise<StoreOrder[]
 
 export async function assignOrder(orderId: string, worker: WorkerProfile | null) {
   if (!db || !firebaseEnabled) throw new Error('Firebase is not configured.');
+  if (!orderId.trim()) throw new Error('This order is missing its ID.');
+  if (worker && !worker.active) throw new Error('Choose an active worker.');
   const now = new Date().toISOString();
   const activity: OrderActivity = {
     id: `assignment-${Date.now()}`,
@@ -161,9 +164,9 @@ export async function assignOrder(orderId: string, worker: WorkerProfile | null)
     message: worker ? `Assigned to ${worker.name}` : 'Returned to the unassigned queue',
     createdAt: now,
   };
-  await updateDoc(doc(db, 'orders', orderId), worker
+  await setDoc(doc(db, 'orders', orderId), worker
     ? { assignedWorkerId: worker.uid, assignedWorkerName: worker.name, status: 'Assigned', updatedAt: now, activity: arrayUnion(activity) }
-    : { assignedWorkerId: null, assignedWorkerName: null, status: 'New', updatedAt: now, activity: arrayUnion(activity) });
+    : { assignedWorkerId: deleteField(), assignedWorkerName: deleteField(), status: 'New', updatedAt: now, activity: arrayUnion(activity) }, { merge: true });
 }
 
 export async function updateAssignedOrderStatus(orderId: string, status: string, actorName?: string, note?: string) {
