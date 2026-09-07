@@ -42,12 +42,23 @@ export type StoreOrder = {
   updatedAt?: string;
 };
 
+export const deliveryStatuses = [
+  'Assigned',
+  'Picked up',
+  'Out for delivery',
+  'Delivered',
+  'Issue',
+] as const;
+
+export type DeliveryStatus = (typeof deliveryStatuses)[number];
+
 export type WorkerProfile = {
   uid: string;
   name: string;
   email: string;
   active: boolean;
   createdAt: string;
+  updatedAt?: string;
 };
 
 const workerProvisioningApp = firebaseEnabled && config
@@ -131,5 +142,19 @@ export async function assignOrder(orderId: string, worker: WorkerProfile | null)
 
 export async function updateAssignedOrderStatus(orderId: string, status: string) {
   if (!db || !firebaseEnabled) throw new Error('Firebase is not configured.');
-  await updateDoc(doc(db, 'orders', orderId), { status, updatedAt: new Date().toISOString() });
+  if (!deliveryStatuses.includes(status as DeliveryStatus)) {
+    throw new Error('Choose a valid delivery status.');
+  }
+  await updateDoc(doc(db, 'orders', orderId), {
+    status: status as DeliveryStatus,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function updateWorkerActive(workerId: string, active: boolean) {
+  if (!db || !firebaseEnabled) throw new Error('Firebase is not configured.');
+  await updateDoc(doc(db, 'workers', workerId), {
+    active,
+    updatedAt: new Date().toISOString(),
+  });
 }

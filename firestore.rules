@@ -33,14 +33,21 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow create: if request.auth != null
-        && request.resource.data.customerId == request.auth.uid;
+        && request.resource.data.keys().hasOnly([
+          'id', 'customerId', 'customer', 'items', 'total', 'createdAt', 'status'
+        ])
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == 'New';
       allow read: if isStorefrontOwner()
         || (request.auth != null && resource.data.customerId == request.auth.uid)
         || (isActiveWorker() && resource.data.assignedWorkerId == request.auth.uid);
       allow update: if isStorefrontOwner()
         || (isActiveWorker()
           && resource.data.assignedWorkerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.status in [
+            'Assigned', 'Picked up', 'Out for delivery', 'Delivered', 'Issue'
+          ]);
       allow delete: if isStorefrontOwner();
     }
 
