@@ -21,5 +21,15 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+
+    match /deliveries/{workerId}/{fileName} {
+      allow read: if isStorefrontOwner()
+        || (request.auth != null && request.auth.uid == workerId);
+      allow create, update: if request.auth != null
+        && request.auth.uid == workerId
+        && firestore.get(/databases/(default)/documents/workers/$(workerId)).data.active == true
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
   }
 }

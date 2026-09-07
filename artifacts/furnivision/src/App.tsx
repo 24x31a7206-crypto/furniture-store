@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from 'react';
 import { ArrowDownRight, ArrowRight, ArrowRightLeft, ArrowUpRight, Box, Check, ChevronDown, ChevronLeft, ClipboardList, Eye, Heart, Image, Instagram, LayoutDashboard, LogOut, Menu, Move3d, Package, Pause, Play, Plus, RefreshCw, RotateCcw, Ruler, Search, Settings2, ShoppingBag, Sparkles, Star, Store, Truck, Upload, UserRound, UsersRound, X } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { createAccount, ensureFirstUserAdmin, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth } from './lib/auth';
@@ -8,7 +8,7 @@ import { fetchCollection, removeCollectionItem, syncCollection } from './lib/per
 import { uploadRoomPhoto } from './lib/room-storage';
 import { defaultSiteContent, loadSiteContent, saveSiteContent, type SiteContent } from './lib/site-content';
 import { uploadSiteAsset } from './lib/site-storage';
-import { assignOrder, createWorkerAccount, deliveryStatuses, isCurrentUserWorker, loadAllOrders, loadAssignedOrders, loadCurrentWorker, loadWorkers, saveCustomerOrder, updateAssignedOrderStatus, updateWorkerActive, type CustomerDetails, type StoreOrder, type WorkerProfile } from './lib/workers';
+import { assignOrder, createWorkerAccount, deliveryStatuses, isCurrentUserWorker, loadAllOrders, loadAssignedOrders, loadCurrentWorker, loadWorkers, saveCustomerOrder, saveProofOfDelivery, updateAssignedOrderStatus, updateWorkerActive, uploadProofOfDelivery, type CustomerDetails, type StoreOrder, type WorkerProfile } from './lib/workers';
 
 type Product = {
   id: string;
@@ -792,7 +792,7 @@ function AdminSignInPage() {
 function WorkerPage({ user }: { user: SessionUser | null }) {
   const [, setLocation] = useLocation();
   const [worker, setWorker] = useState<WorkerProfile | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -841,8 +841,107 @@ function WorkerPage({ user }: { user: SessionUser | null }) {
 
   const inProgress = orders.filter((order) => ['Assigned', 'Picked up', 'Out for delivery'].includes(order.status)).length;
   const delivered = orders.filter((order) => order.status === 'Delivered').length;
+  return <WorkerOperationsPanel
+    worker={worker}
+    orders={orders}
+    inProgress={inProgress}
+    delivered={delivered}
+    savingId={savingId}
+    message={message}
+    refresh={refresh}
+    setLocation={setLocation}
+    setMessage={setMessage}
+    setSavingId={setSavingId}
+    setOrders={setOrders}
+  />;
 
+  // @ts-expect-error Legacy markup retained below for backwards-compatible reference.
   return <main className="min-h-screen bg-[#171512] px-5 pb-28 pt-16 text-[#f3eee4] md:px-10 md:pt-20"><div className="mx-auto max-w-[1280px]"><div className="flex flex-col justify-between gap-8 border-b border-[#f3eee4]/20 pb-10 md:flex-row md:items-end"><div><p className="eyebrow">FurniVision / Delivery desk</p><h1 className="mt-5 max-w-3xl font-display text-7xl leading-[.8] tracking-[-.06em] md:text-9xl">Your<br /><em>route sheet.</em></h1><p className="mt-6 text-sm text-[#f3eee4]/60">Welcome, {worker.name}. This private panel only shows orders assigned to you.</p></div><div className="flex flex-wrap gap-3"><button onClick={() => void refresh()} className="rounded-full border border-[#b99a63]/40 px-4 py-3 font-mono-ui text-[10px] uppercase tracking-[.14em] text-[#b99a63]" disabled={loading} data-testid="button-worker-refresh">{loading ? 'Refreshing…' : 'Refresh'}</button><button onClick={async () => { await signOutUser(); setLocation('/'); }} className="rounded-full border border-[#f3eee4]/20 px-4 py-3 text-xs uppercase tracking-[.14em]" data-testid="button-worker-sign-out">Sign out</button></div></div>{message && <div className="mt-6 rounded-xl border border-[#bd8250]/40 bg-[#bd8250]/10 px-4 py-3 text-sm text-[#bd8250]" role="alert">{message}</div>}<div className="mt-8 grid gap-4 sm:grid-cols-3"><article className="rounded-2xl bg-[#b99a63] p-5 text-[#0b0b0a]"><p className="eyebrow">Assigned</p><p className="mt-4 font-display text-5xl">{orders.length}</p><p className="mt-2 text-xs opacity-65">orders in your queue</p></article><article className="rounded-2xl bg-[#24231f] p-5"><p className="eyebrow">In progress</p><p className="mt-4 font-display text-5xl">{inProgress}</p><p className="mt-2 text-xs text-[#f3eee4]/55">orders still on route</p></article><article className="rounded-2xl bg-[#24231f] p-5"><p className="eyebrow">Delivered</p><p className="mt-4 font-display text-5xl">{delivered}</p><p className="mt-2 text-xs text-[#f3eee4]/55">completed deliveries</p></article></div>{orders.length === 0 ? <section className="mt-12 rounded-[1.5rem] border border-[#f3eee4]/15 bg-[#1d1b18] p-8"><p className="eyebrow">No active assignments</p><h2 className="mt-4 font-display text-5xl">A quiet<br /><em>route today.</em></h2><p className="mt-5 max-w-md text-sm leading-6 text-[#f3eee4]/60">New orders assigned by the owner will appear here automatically when you refresh.</p><button onClick={() => void refresh()} className="mt-8 rounded-full bg-[#b99a63] px-5 py-3 text-xs uppercase tracking-[.14em] text-[#0b0b0a]">Refresh assignments</button></section> : <section className="mt-12 grid gap-6 lg:grid-cols-2">{orders.map((order) => <article key={order.id} className="rounded-[1.5rem] border border-[#f3eee4]/15 bg-[#1d1b18] p-6 md:p-8" data-testid={`worker-order-${order.id}`}><div className="flex items-start justify-between gap-5 border-b border-[#f3eee4]/15 pb-5"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-[#b99a63]">Order / {order.id}</p><p className="mt-2 text-xs text-[#f3eee4]/50">{new Date(order.createdAt).toLocaleString()}</p></div><span className="rounded-full bg-[#b99a63] px-3 py-1.5 text-[9px] uppercase tracking-[.14em] text-[#0b0b0a]">{order.status}</span></div><div className="mt-6"><p className="eyebrow">Customer details</p><h2 className="mt-3 font-display text-4xl">{order.customer.firstName} {order.customer.lastName}</h2><div className="mt-5 grid gap-2 text-sm text-[#f3eee4]/70"><p>{order.customer.email}</p><p>{order.customer.address}, {order.customer.city}</p><p>Preferred delivery: {order.customer.deliveryWindow}</p></div></div><div className="mt-8 border-t border-[#f3eee4]/15 pt-6"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Order details</p><div className="mt-3 grid gap-2 text-sm text-[#f3eee4]/75">{order.items.map((item, index) => <p key={`${item.id}-${index}`}>{item.name} <span className="text-[#f3eee4]/45">· {item.material}</span></p>)}</div></div><p className="font-display text-3xl">{formatPrice(order.total)}</p></div><label className="mt-7 block text-xs uppercase tracking-[.13em] text-[#f3eee4]/55">Update delivery status<select value={order.status} disabled={savingId === order.id} onChange={(event) => void updateStatus(order.id, event.target.value)} className="mt-2 w-full rounded-xl border border-[#f3eee4]/15 bg-[#24231f] px-4 py-3 text-sm text-[#f3eee4] outline-none focus:border-[#b99a63]" data-testid={`select-worker-status-${order.id}`}>{deliveryStatuses.map((status) => <option key={status}>{status}</option>)}</select></label></div></article>)}</section>}</div></main>;
+}
+
+function WorkerOperationsPanel({
+  worker,
+  orders,
+  inProgress,
+  delivered,
+  savingId,
+  message,
+  refresh,
+  setLocation,
+  setMessage,
+  setSavingId,
+  setOrders,
+}: {
+  worker: WorkerProfile;
+  orders: StoreOrder[];
+  inProgress: number;
+  delivered: number;
+  savingId: string | null;
+  message: string;
+  refresh: () => Promise<void>;
+  setLocation: (path: string) => void;
+  setMessage: Dispatch<SetStateAction<string>>;
+  setSavingId: Dispatch<SetStateAction<string | null>>;
+  setOrders: Dispatch<SetStateAction<StoreOrder[]>>;
+}) {
+  const [proofOrderId, setProofOrderId] = useState<string | null>(null);
+  const [proofNotes, setProofNotes] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [search, setSearch] = useState('');
+  const visibleOrders = orders.filter((order) => {
+    const query = search.trim().toLowerCase();
+    return !query || order.id.toLowerCase().includes(query)
+      || `${order.customer.firstName} ${order.customer.lastName}`.toLowerCase().includes(query)
+      || order.customer.city.toLowerCase().includes(query);
+  });
+
+  const updateStatus = async (orderId: string, status: string) => {
+    const note = status === 'Issue' ? window.prompt('What went wrong with this delivery?') || '' : '';
+    setSavingId(orderId);
+    setMessage('');
+    try {
+      await updateAssignedOrderStatus(orderId, status, worker.name, note);
+      setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status, updatedAt: new Date().toISOString() } : order));
+      setMessage(status === 'Issue' ? 'Issue reported to the admin.' : `Order marked ${status}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not update this order.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const submitProof = async (orderId: string) => {
+    setSavingId(orderId);
+    setMessage('');
+    try {
+      const existingPhotoUrl = orders.find((order) => order.id === orderId)?.proofOfDelivery?.photoUrl;
+      const photoUrl = proofFile ? await uploadProofOfDelivery(worker.uid, orderId, proofFile) : existingPhotoUrl;
+      await saveProofOfDelivery(orderId, worker.uid, photoUrl, proofNotes);
+      setOrders((current) => current.map((order) => order.id === orderId ? {
+        ...order,
+        status: 'Delivered',
+        updatedAt: new Date().toISOString(),
+        proofOfDelivery: { photoUrl, notes: proofNotes, deliveredAt: new Date().toISOString(), workerId: worker.uid },
+      } : order));
+      setProofOrderId(null);
+      setProofNotes('');
+      setProofFile(null);
+      setMessage('Proof of delivery saved.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not save proof of delivery.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return <main className="min-h-screen bg-[#11110f] px-5 pb-24 text-[#f3eee4] md:px-8 lg:px-12">
+    <div className="mx-auto max-w-[1380px]">
+      <header className="flex flex-col justify-between gap-6 border-b border-[#f3eee4]/10 py-7 md:flex-row md:items-center"><div><p className="font-mono-ui text-[9px] uppercase tracking-[.18em] text-[#f3eee4]/35">FurniVision / Private delivery desk</p><h1 className="mt-3 font-display text-5xl leading-none md:text-6xl">My route</h1><p className="mt-3 text-sm text-[#f3eee4]/50">Welcome back, {worker.name}. Only your assigned orders appear here.</p></div><div className="flex items-center gap-2"><button onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-xl border border-[#f3eee4]/10 px-4 py-3 text-xs text-[#f3eee4]/60 hover:border-[#b99a63]/50 hover:text-[#b99a63]" data-testid="button-worker-refresh">{savingId ? 'Saving…' : 'Refresh'}</button><button onClick={async () => { await signOutUser(); setLocation('/'); }} className="rounded-xl border border-[#f3eee4]/10 px-4 py-3 text-xs text-[#f3eee4]/60 hover:text-[#f3eee4]" data-testid="button-worker-sign-out">Sign out</button></div></header>
+      {message && <div className="mt-6 rounded-xl border border-[#b99a63]/30 bg-[#b99a63]/10 px-4 py-3 text-sm text-[#b99a63]" role="status">{message}</div>}
+      <div className="grid gap-3 py-6 sm:grid-cols-3"><div className="rounded-2xl bg-[#b99a63] p-5 text-[#11110f]"><p className="font-mono-ui text-[9px] uppercase tracking-[.16em] opacity-60">Assigned</p><p className="mt-3 font-display text-4xl">{orders.length}</p></div><div className="rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-5"><p className="font-mono-ui text-[9px] uppercase tracking-[.16em] text-[#f3eee4]/35">In progress</p><p className="mt-3 font-display text-4xl">{inProgress}</p></div><div className="rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-5"><p className="font-mono-ui text-[9px] uppercase tracking-[.16em] text-[#f3eee4]/35">Delivered</p><p className="mt-3 font-display text-4xl">{delivered}</p></div></div>
+      <label className="flex max-w-xl items-center gap-3 rounded-2xl border border-[#f3eee4]/10 bg-[#191815] px-4 py-3"><Search size={15} className="text-[#f3eee4]/35" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your route by order, customer, or city" className="w-full bg-transparent text-sm outline-none placeholder:text-[#f3eee4]/30" data-testid="input-worker-order-search" /></label>
+      {visibleOrders.length === 0 ? <section className="mt-8 rounded-2xl border border-dashed border-[#f3eee4]/15 py-16 text-center"><p className="font-display text-4xl">No matching deliveries.</p><p className="mt-3 text-sm text-[#f3eee4]/45">New assignments from the admin will appear here.</p></section> : <section className="mt-8 grid gap-5 lg:grid-cols-2">{visibleOrders.map((order) => <article key={order.id} className="rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-5 md:p-6" data-testid={`worker-order-${order.id}`}><div className="flex items-start justify-between gap-4 border-b border-[#f3eee4]/10 pb-5"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-[#b99a63]">Order / {order.id}</p><p className="mt-2 text-xs text-[#f3eee4]/40">{new Date(order.createdAt).toLocaleString()}</p></div><span className="rounded-full bg-[#b99a63]/15 px-3 py-1.5 text-[9px] uppercase tracking-[.12em] text-[#b99a63]">{order.status}</span></div><div className="mt-5"><p className="eyebrow">Customer and delivery</p><h2 className="mt-3 font-display text-3xl">{order.customer.firstName} {order.customer.lastName}</h2><div className="mt-4 grid gap-2 text-sm text-[#f3eee4]/65"><p>{order.customer.email}</p><p>{order.customer.address}, {order.customer.city}</p><p>Preferred window: {order.customer.deliveryWindow}</p></div></div><div className="mt-6 border-t border-[#f3eee4]/10 pt-5"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Order details</p><div className="mt-3 grid gap-2 text-sm text-[#f3eee4]/65">{order.items.map((item, index) => <p key={`${item.id}-${index}`}>{item.name} <span className="text-[#f3eee4]/35">· {item.material}</span></p>)}</div></div><p className="font-display text-2xl">{formatPrice(order.total)}</p></div><label className="mt-6 block text-xs uppercase tracking-[.13em] text-[#f3eee4]/50">Update delivery status<select value={order.status} disabled={savingId === order.id} onChange={(event) => void updateStatus(order.id, event.target.value)} className="mt-2 w-full rounded-xl border border-[#f3eee4]/10 bg-[#11110f] px-4 py-3 text-sm text-[#f3eee4]" data-testid={`select-worker-status-${order.id}`}>{deliveryStatuses.map((status) => <option key={status}>{status}</option>)}</select></label><button onClick={() => { setProofOrderId(order.id); setProofNotes(order.proofOfDelivery?.notes || ''); }} className="mt-3 w-full rounded-xl border border-[#b99a63]/40 px-4 py-3 text-xs text-[#b99a63] hover:bg-[#b99a63]/10" data-testid={`button-proof-${order.id}`}>{order.proofOfDelivery ? 'Edit proof of delivery' : 'Add proof of delivery'}</button>{proofOrderId === order.id && <div className="mt-4 rounded-xl border border-[#f3eee4]/10 bg-[#11110f] p-4"><p className="eyebrow">Proof of delivery</p><input type="file" accept="image/*" onChange={(event) => setProofFile(event.target.files?.[0] || null)} className="mt-3 block w-full text-xs text-[#f3eee4]/55 file:mr-3 file:rounded-lg file:border-0 file:bg-[#b99a63] file:px-3 file:py-2 file:text-xs file:text-[#11110f]" data-testid={`input-proof-file-${order.id}`} /><textarea value={proofNotes} onChange={(event) => setProofNotes(event.target.value)} placeholder="Add delivery notes…" rows={3} className="mt-3 w-full rounded-xl border border-[#f3eee4]/10 bg-[#191815] px-3 py-3 text-sm text-[#f3eee4] outline-none placeholder:text-[#f3eee4]/30" data-testid={`textarea-proof-notes-${order.id}`} /><div className="mt-3 flex gap-2"><button onClick={() => void submitProof(order.id)} disabled={savingId === order.id} className="rounded-xl bg-[#b99a63] px-4 py-2.5 text-xs text-[#11110f]" data-testid={`button-save-proof-${order.id}`}>{savingId === order.id ? 'Saving…' : 'Save proof'}</button><button onClick={() => setProofOrderId(null)} className="rounded-xl border border-[#f3eee4]/10 px-4 py-2.5 text-xs text-[#f3eee4]/60">Cancel</button></div></div>}</div>{order.activity?.length ? <div className="mt-5 border-t border-[#f3eee4]/10 pt-5"><p className="eyebrow">Recent activity</p><div className="mt-3 grid gap-3">{[...order.activity].reverse().slice(0, 3).map((activity) => <div key={activity.id} className="flex gap-3 text-xs"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#b99a63]" /><div><p className="text-[#f3eee4]/70">{activity.message}</p><p className="mt-1 text-[#f3eee4]/35">{new Date(activity.createdAt).toLocaleString()}</p></div></div>)}</div></div> : null}</article>)}</section>}</div>
+  </main>;
 }
 
 function AdminPage({ user }: { user: SessionUser | null }) {
@@ -975,6 +1074,19 @@ function AdminPage({ user }: { user: SessionUser | null }) {
   if (allowed === null) return <main className="flex min-h-screen items-center justify-center bg-[#b99a63] px-5 pt-24"><p className="font-mono-ui text-[10px] uppercase tracking-[.16em]">Checking staff access…</p></main>;
   if (!allowed) return <main className="min-h-screen bg-[#0b0b0a] px-5 pb-28 pt-32 text-[#f3eee4] md:px-10 md:pt-44"><div className="mx-auto max-w-[900px]"><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[#b99a63]">FurniVision / Admin</p><h1 className="mt-5 font-display text-8xl leading-[.76] tracking-[-.06em]">Access<br /><em>denied.</em></h1><p className="mt-8 max-w-lg text-sm leading-6 text-[#f3eee4]/60">This account is not the storefront owner. Only the first account to sign in can manage the storefront.</p><Link href="/account" className="mt-8 inline-flex rounded-full bg-[#b99a63] px-6 py-4 text-xs uppercase tracking-[.15em] text-[#f3eee4]" data-testid="link-admin-access-account">Return to account</Link></div></main>;
 
+  if ((activePanel as string) === 'orders') {
+    return <AdminOrdersPage
+      orders={orders}
+      workers={workers}
+      saving={saving}
+      selectedWorkerByOrder={{ ...Object.fromEntries(orders.map((order) => [order.id, selectedWorkerByOrder[order.id] ?? order.assignedWorkerId ?? ''])) }}
+      setSelectedWorkerByOrder={setSelectedWorkerByOrder}
+      saveAssignment={saveAssignment}
+      setActivePanel={setActivePanel}
+      onRefresh={() => window.location.reload()}
+    />;
+  }
+
   const storefrontPages = [
     { label: 'Home', path: '/', description: 'Homepage hero, collections, and featured pieces.' },
     { label: 'All furniture', path: '/furniture', description: 'The complete catalog and collection filters.' },
@@ -1009,6 +1121,55 @@ function AdminPage({ user }: { user: SessionUser | null }) {
     {activePanel === 'homepage' && <form onSubmit={saveHomepage} className="mt-10 grid gap-8 lg:grid-cols-[1.1fr_.9fr]"><section className="rounded-[1.5rem] border border-[#f3eee4]/15 bg-[#1d1b18] p-5 md:p-8"><p className="eyebrow">Homepage story</p><h2 className="mt-4 font-display text-5xl">Set the tone.</h2><div className="mt-7 grid gap-5"><label className="text-xs uppercase tracking-[.13em]">Hero eyebrow<input value={siteDraft.heroEyebrow} onChange={(event) => setSiteDraft({ ...siteDraft, heroEyebrow: event.target.value })} className={fieldClass + ' border-[#f3eee4]/15 bg-[#24231f] text-[#f3eee4]'} data-testid="input-admin-hero-eyebrow" /></label><label className="text-xs uppercase tracking-[.13em]">Hero title<textarea value={siteDraft.heroTitle} onChange={(event) => setSiteDraft({ ...siteDraft, heroTitle: event.target.value })} className={fieldClass + ' min-h-24 resize-y border-[#f3eee4]/15 bg-[#24231f] text-[#f3eee4] font-display text-3xl'} placeholder={'Make room\nfor feeling.'} data-testid="input-admin-hero-title" /><span className="mt-1 block text-[10px] normal-case tracking-normal text-[#f3eee4]/45">Use a new line to split the title across two lines.</span></label><label className="text-xs uppercase tracking-[.13em]">Hero supporting text<textarea value={siteDraft.heroBody} onChange={(event) => setSiteDraft({ ...siteDraft, heroBody: event.target.value })} className={fieldClass + ' min-h-24 resize-y border-[#f3eee4]/15 bg-[#24231f] text-[#f3eee4]'} data-testid="input-admin-hero-body" /></label><label className="text-xs uppercase tracking-[.13em]">Announcement bar text<input value={siteDraft.announcement} onChange={(event) => setSiteDraft({ ...siteDraft, announcement: event.target.value })} className={fieldClass + ' border-[#f3eee4]/15 bg-[#24231f] text-[#f3eee4]'} data-testid="input-admin-announcement" /></label><label className="text-xs uppercase tracking-[.13em]">Collection marquee<input value={siteDraft.marquee} onChange={(event) => setSiteDraft({ ...siteDraft, marquee: event.target.value })} className={fieldClass + ' border-[#f3eee4]/15 bg-[#24231f] text-[#f3eee4]'} data-testid="input-admin-marquee" /></label><label className="text-xs uppercase tracking-[.13em]">Footer note<input value={siteDraft.footerNote} onChange={(event) => setSiteDraft({ ...siteDraft, footerNote: event.target.value })} className={fieldClass + ' border-[#f3eee4]/15 bg-[#24231f] text-[#f3eee4]'} data-testid="input-admin-footer-note" /></label></div></section><section className="h-fit rounded-[1.5rem] bg-[#b99a63] p-5 text-[#0b0b0a] md:p-8"><p className="eyebrow">Hero media</p><h2 className="mt-4 font-display text-5xl leading-[.88]">Show, don’t<br />just tell.</h2><div className="mt-7 grid gap-5"><label className="text-xs uppercase tracking-[.13em]">Hero video URL<input value={siteDraft.heroVideo} onChange={(event) => setSiteDraft({ ...siteDraft, heroVideo: event.target.value })} className={fieldClass} data-testid="input-admin-hero-video" /></label><label className="text-xs uppercase tracking-[.13em]">Upload hero video<input type="file" accept="video/*" onChange={(event) => void uploadAsset('heroVideo', event.target.files?.[0])} className="mt-2 block w-full text-xs" data-testid="input-admin-hero-video-upload" />{uploading === 'heroVideo' && <span className="mt-1 block text-xs">Uploading…</span>}</label><label className="text-xs uppercase tracking-[.13em]">Hero poster URL<input value={siteDraft.heroPoster} onChange={(event) => setSiteDraft({ ...siteDraft, heroPoster: event.target.value })} className={fieldClass} data-testid="input-admin-hero-poster" /></label><label className="text-xs uppercase tracking-[.13em]">Upload hero poster<input type="file" accept="image/*" onChange={(event) => void uploadAsset('heroPoster', event.target.files?.[0])} className="mt-2 block w-full text-xs" data-testid="input-admin-hero-poster-upload" />{uploading === 'heroPoster' && <span className="mt-1 block text-xs">Uploading…</span>}</label><div className="overflow-hidden rounded-2xl bg-[#0b0b0a]/15"><video src={siteDraft.heroVideo} poster={siteDraft.heroPoster} muted loop autoPlay playsInline className="h-48 w-full object-cover" aria-label="Hero video preview" /></div><button disabled={saving || uploading !== null} className="rounded-full bg-[#0b0b0a] py-4 text-xs uppercase tracking-[.15em] text-[#f3eee4] disabled:opacity-50" data-testid="button-save-homepage">{saving ? 'Publishing…' : 'Publish homepage changes'}</button></div></section></form>}
     {activePanel === 'settings' && <section className="mt-10 grid gap-8 lg:grid-cols-2"><section className="rounded-[1.5rem] border border-[#f3eee4]/15 bg-[#1d1b18] p-6 md:p-8"><p className="eyebrow">Storefront settings</p><h2 className="mt-4 font-display text-5xl">Keep it considered.</h2><div className="mt-7 divide-y divide-[#f3eee4]/10"><div className="flex items-start justify-between gap-4 py-4"><span><strong className="text-sm">Theme</strong><span className="mt-1 block text-xs text-[#f3eee4]/50">Dark luxury / brass accent</span></span><span className="rounded-full border border-[#b99a63]/40 px-3 py-1 text-[9px] uppercase tracking-[.13em] text-[#b99a63]">Live</span></div><div className="flex items-start justify-between gap-4 py-4"><span><strong className="text-sm">Content source</strong><span className="mt-1 block text-xs text-[#f3eee4]/50">Firebase siteContent/home</span></span><span className="rounded-full border border-[#b99a63]/40 px-3 py-1 text-[9px] uppercase tracking-[.13em] text-[#b99a63]">Connected</span></div><div className="flex items-start justify-between gap-4 py-4"><span><strong className="text-sm">Asset source</strong><span className="mt-1 block text-xs text-[#f3eee4]/50">Protected Firebase Storage /site</span></span><span className="rounded-full border border-[#b99a63]/40 px-3 py-1 text-[9px] uppercase tracking-[.13em] text-[#b99a63]">Protected</span></div></div></section><section className="rounded-[1.5rem] bg-[#24231f] p-6 md:p-8"><p className="eyebrow">Live preview</p><h2 className="mt-4 font-display text-5xl">Check the room.</h2><p className="mt-6 max-w-md text-sm leading-6 text-[#f3eee4]/60">Open the public storefront in a new tab after publishing to review the customer experience on desktop and mobile.</p><Link href="/" className="mt-8 inline-flex rounded-full bg-[#b99a63] px-5 py-3 text-xs uppercase tracking-[.14em] text-[#0b0b0a]" data-testid="link-admin-preview">Preview storefront</Link><p className="mt-8 text-xs leading-5 text-[#f3eee4]/45">This workspace only exposes controls available through the current Firebase setup. Orders, customer accounts, and owner access remains protected outside the public UI.</p></section></section>}
    </div></div></div></main>;
+}
+
+function AdminOrdersPage({
+  orders,
+  workers,
+  saving,
+  selectedWorkerByOrder,
+  setSelectedWorkerByOrder,
+  saveAssignment,
+  setActivePanel,
+  onRefresh,
+}: {
+  orders: StoreOrder[];
+  workers: WorkerProfile[];
+  saving: boolean;
+  selectedWorkerByOrder: Record<string, string>;
+  setSelectedWorkerByOrder: Dispatch<SetStateAction<Record<string, string>>>;
+  saveAssignment: (order: StoreOrder) => Promise<void>;
+  setActivePanel: (panel: 'overview' | 'orders' | 'workers' | 'products' | 'homepage' | 'pages' | 'settings') => void;
+  onRefresh: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All statuses');
+  const [workerFilter, setWorkerFilter] = useState('All workers');
+  const filteredOrders = orders.filter((order) => {
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || order.id.toLowerCase().includes(query)
+      || `${order.customer.firstName} ${order.customer.lastName}`.toLowerCase().includes(query)
+      || order.customer.city.toLowerCase().includes(query);
+    const matchesStatus = statusFilter === 'All statuses' || order.status === statusFilter;
+    const matchesWorker = workerFilter === 'All workers'
+      || (workerFilter === 'unassigned' ? !order.assignedWorkerId : order.assignedWorkerId === workerFilter);
+    return matchesSearch && matchesStatus && matchesWorker;
+  });
+  const unassignedCount = orders.filter((order) => !order.assignedWorkerId).length;
+  const deliveredCount = orders.filter((order) => order.status === 'Delivered').length;
+  const activeWorkerCount = workers.filter((worker) => worker.active).length;
+
+  return <main className="min-h-screen bg-[#11110f] px-5 pb-24 text-[#f3eee4] md:px-8 lg:px-12">
+    <div className="mx-auto max-w-[1380px]">
+      <header className="flex flex-col justify-between gap-6 border-b border-[#f3eee4]/10 py-7 md:flex-row md:items-center">
+        <div><button onClick={() => setActivePanel('overview')} className="mb-4 inline-flex items-center gap-2 font-mono-ui text-[9px] uppercase tracking-[.16em] text-[#b99a63]" data-testid="button-orders-back">← Back to overview</button><p className="font-mono-ui text-[9px] uppercase tracking-[.18em] text-[#f3eee4]/35">Operations / Order queue</p><h1 className="mt-3 font-display text-5xl leading-none md:text-6xl">Orders</h1></div>
+        <div className="flex items-center gap-2"><button onClick={onRefresh} className="inline-flex items-center gap-2 rounded-xl border border-[#f3eee4]/10 px-4 py-3 text-xs text-[#f3eee4]/60 hover:border-[#b99a63]/50 hover:text-[#b99a63]" data-testid="button-orders-refresh"><RefreshCw size={14} /> Refresh queue</button><Link href="/" target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-xl bg-[#b99a63] px-4 py-3 text-xs text-[#11110f] sm:inline-flex" data-testid="link-orders-storefront">View storefront <ArrowUpRight size={13} /></Link></div>
+      </header>
+      <div className="grid gap-3 py-6 sm:grid-cols-3"><div className="rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-5"><p className="font-mono-ui text-[9px] uppercase tracking-[.16em] text-[#f3eee4]/35">Total orders</p><p className="mt-3 font-display text-4xl">{orders.length}</p></div><div className="rounded-2xl border border-[#b99a63]/25 bg-[#b99a63]/[.08] p-5"><p className="font-mono-ui text-[9px] uppercase tracking-[.16em] text-[#b99a63]">Needs assignment</p><p className="mt-3 font-display text-4xl text-[#b99a63]">{unassignedCount}</p></div><div className="rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-5"><p className="font-mono-ui text-[9px] uppercase tracking-[.16em] text-[#f3eee4]/35">Delivered / workers</p><p className="mt-3 font-display text-4xl">{deliveredCount}<span className="mx-2 text-2xl text-[#f3eee4]/25">/</span>{activeWorkerCount}</p></div></div>
+      <div className="grid gap-3 rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-3 md:grid-cols-[1fr_190px_190px]"><label className="flex items-center gap-3 rounded-xl bg-[#11110f] px-4 py-3"><Search size={15} className="text-[#f3eee4]/35" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, customer, city" className="w-full bg-transparent text-sm text-[#f3eee4] outline-none placeholder:text-[#f3eee4]/30" data-testid="input-order-search" /></label><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-xl border border-[#f3eee4]/10 bg-[#11110f] px-4 py-3 text-xs text-[#f3eee4]" data-testid="select-order-status-filter"><option>All statuses</option>{['New', ...deliveryStatuses].map((status) => <option key={status}>{status}</option>)}</select><select value={workerFilter} onChange={(event) => setWorkerFilter(event.target.value)} className="rounded-xl border border-[#f3eee4]/10 bg-[#11110f] px-4 py-3 text-xs text-[#f3eee4]" data-testid="select-order-worker-filter"><option value="All workers">All workers</option><option value="unassigned">Unassigned</option>{workers.map((worker) => <option key={worker.uid} value={worker.uid}>{worker.name}</option>)}</select></div>
+      <div className="mb-4 mt-5 flex items-center justify-between text-xs text-[#f3eee4]/40"><span>{filteredOrders.length} of {orders.length} orders shown</span><span>Assignment changes are recorded in the activity timeline</span></div>
+      <div className="grid gap-4">{filteredOrders.map((order) => <article key={order.id} className="rounded-2xl border border-[#f3eee4]/10 bg-[#191815] p-5 md:p-6" data-testid={`admin-order-${order.id}`}><div className="flex flex-col justify-between gap-4 border-b border-[#f3eee4]/10 pb-5 md:flex-row md:items-start"><div><div className="flex flex-wrap items-center gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-[#b99a63]">Order / {order.id}</p><span className="rounded-full bg-[#b99a63]/15 px-3 py-1 text-[9px] uppercase tracking-[.12em] text-[#b99a63]">{order.status}</span></div><h2 className="mt-3 font-display text-3xl">{order.customer.firstName} {order.customer.lastName}</h2><p className="mt-1 text-xs text-[#f3eee4]/45">{order.customer.city} · {new Date(order.createdAt).toLocaleString()}</p></div><p className="font-display text-3xl">{formatPrice(order.total)}</p></div><div className="grid gap-6 py-5 lg:grid-cols-[1fr_1fr_220px]"><div><p className="eyebrow">Delivery details</p><div className="mt-3 grid gap-2 text-sm text-[#f3eee4]/65"><p>{order.customer.email}</p><p>{order.customer.address}, {order.customer.city}</p><p>Preferred window: {order.customer.deliveryWindow}</p></div></div><div><p className="eyebrow">Items</p><div className="mt-3 grid gap-2 text-sm text-[#f3eee4]/65">{order.items.map((item, index) => <p key={`${item.id}-${index}`}>{item.name} <span className="text-[#f3eee4]/35">· {item.material}</span></p>)}</div></div><div><label className="eyebrow" htmlFor={`assign-${order.id}`}>Assign worker</label><select id={`assign-${order.id}`} value={selectedWorkerByOrder[order.id] || ''} onChange={(event) => setSelectedWorkerByOrder((current) => ({ ...current, [order.id]: event.target.value }))} className="mt-3 w-full rounded-xl border border-[#f3eee4]/10 bg-[#11110f] px-3 py-3 text-xs text-[#f3eee4]" data-testid={`select-admin-worker-${order.id}`}><option value="">Unassigned</option>{workers.filter((worker) => worker.active).map((worker) => <option key={worker.uid} value={worker.uid}>{worker.name}</option>)}</select><button onClick={() => void saveAssignment(order)} disabled={saving} className="mt-2 w-full rounded-xl bg-[#b99a63] px-3 py-3 text-[10px] uppercase tracking-[.14em] text-[#11110f] disabled:opacity-50" data-testid={`button-admin-assign-${order.id}`}>{saving ? 'Saving…' : 'Save assignment'}</button></div></div><div className="border-t border-[#f3eee4]/10 pt-5"><p className="eyebrow">Activity timeline</p>{order.activity?.length ? <div className="mt-3 grid gap-3">{[...order.activity].reverse().slice(0, 5).map((activity) => <div key={activity.id} className="flex gap-3 text-xs"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#b99a63]" /><div><p className="text-[#f3eee4]/75">{activity.message}</p><p className="mt-1 text-[#f3eee4]/35">{activity.actorName ? `${activity.actorName} · ` : ''}{new Date(activity.createdAt).toLocaleString()}</p></div></div>)}</div> : <p className="mt-3 text-xs text-[#f3eee4]/35">No activity has been recorded yet.</p>}{order.proofOfDelivery?.photoUrl && <a href={order.proofOfDelivery.photoUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex text-xs text-[#b99a63] underline">Open proof of delivery photo</a>}</div></article>)}</div>{filteredOrders.length === 0 && <div className="rounded-2xl border border-dashed border-[#f3eee4]/15 py-16 text-center text-sm text-[#f3eee4]/45">No orders match these filters.</div>}</div>
+  </main>;
 }
 
 function AccountPage({ user, orders }: { user: SessionUser | null; orders: Order[] }) {
