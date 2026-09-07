@@ -766,3 +766,42 @@ main > section:first-of-type:hover .hero-intro-video {
   .catalog-pagination { margin-top: 2.5rem; }
   .catalog-pagination button { min-height: 2.75rem; }
 }
+
+/* Admin studio: a denser operations UI than the editorial storefront. */
+.admin-shell {
+  color: #f3eee4;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(185, 154, 99, .08), transparent 28rem),
+    #11110f;
+}
+.admin-shell .eyebrow {
+  color: rgba(243, 238, 228, .48);
+}
+.admin-shell section,
+.admin-shell article {
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+}
+.admin-shell section > article:hover {
+  border-color: rgba(185, 154, 99, .3);
+}
+.admin-sidebar {
+  background: linear-gradient(180deg, #191815 0%, #151412 100%);
+}
+.admin-nav-item {
+  letter-spacing: .01em;
+}
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea {
+  border-radius: .75rem;
+}
+.admin-shell input:focus,
+.admin-shell select:focus,
+.admin-shell textarea:focus {
+  box-shadow: 0 0 0 3px rgba(185, 154, 99, .12);
+}
+@media (max-width: 1023px) {
+  .admin-sidebar {
+    background: #171512;
+  }
+}
