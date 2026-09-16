@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from 'react';
 import { ArrowDownRight, ArrowRight, ArrowRightLeft, ArrowUpRight, Box, Check, ChevronDown, ChevronLeft, ClipboardList, Eye, Heart, Image, Instagram, LayoutDashboard, LogOut, Menu, Move3d, Package, Pause, Play, Plus, RefreshCw, RotateCcw, Ruler, Search, Settings2, ShoppingBag, Sparkles, Star, Store, Truck, Upload, UserRound, UsersRound, X } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { createAccount, ensureFirstUserAdmin, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth } from './lib/auth';
@@ -270,10 +270,9 @@ function ProductExperience({ product, meta, currentVariant, currentPrice, liked,
         <div className="mt-8 grid gap-12 md:grid-cols-[1.1fr_.9fr] md:gap-20">
           <div className="grid gap-4 sm:grid-cols-[82px_1fr]">
             <div className="order-2 flex gap-3 sm:order-1 sm:flex-col">{thumbs.map((thumb, index) => <button key={`${thumb}-${index}`} onClick={() => setActiveImage(thumb)} className={`overflow-hidden rounded-xl border-2 ${activeImage === thumb ? 'border-[#bd8250]' : 'border-transparent'}`} data-testid={`button-product-thumb-${index}`} aria-label={`View product image ${index + 1}`}><img src={thumb} alt="" className="h-16 w-16 object-cover sm:h-20 sm:w-20" /></button>)}</div>
-            <div className="image-reveal perspective order-1 overflow-hidden rounded-[1.5rem] bg-[#26231f]" onPointerMove={(event) => { if (event.buttons) setRotation((current) => current + event.movementX * 0.4); }}>
-              <img src={activeImage} alt={product.name} className="h-full min-h-[430px] w-full object-cover transition-transform duration-300 md:min-h-[650px]" style={{ transform: `perspective(1100px) rotateY(${rotation}deg) scale(${1 + Math.min(Math.abs(rotation), 24) / 160})` }} />
-              <div className="absolute bottom-5 left-5 flex items-center gap-2 rounded-full bg-[#171512]/85 px-3 py-2 font-mono-ui text-[9px] uppercase tracking-[.13em]"><Move3d size={13} /> Drag to rotate</div>
-            </div>
+             <div className="order-1 overflow-hidden rounded-[1.5rem]">
+               <InteractiveProductStage product={{ ...product, image: activeImage }} rotation={rotation} onRotationChange={setRotation} autoRotate={false} />
+             </div>
           </div>
           <div className="flex flex-col justify-center">
             <p className="eyebrow">{product.collection} / FurniVision</p>
@@ -486,6 +485,146 @@ function ProductCard({ product, liked, onLike, onAdd, compared = false, onCompar
   );
 }
 
+function InteractiveProductStage({ product, compact = false, rotation, onRotationChange, autoRotate = true }: {
+  product: Product;
+  compact?: boolean;
+  rotation?: number;
+  onRotationChange?: (value: number) => void;
+  autoRotate?: boolean;
+}) {
+  const [stageRotation, setStageRotation] = useState(rotation ?? 0);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const currentRotation = rotation ?? stageRotation;
+  const setRotation = (value: number | ((current: number) => number)) => {
+    const next = typeof value === 'function' ? value(currentRotation) : value;
+    setStageRotation(next);
+    onRotationChange?.(next);
+  };
+
+  useEffect(() => {
+    if (!autoRotate || dragging || typeof window === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => setStageRotation((current) => current + 0.18), 32);
+    return () => window.clearInterval(timer);
+  }, [autoRotate, dragging]);
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: Number((-y * 7).toFixed(2)), y: Number((x * 9).toFixed(2)) });
+    if (dragging) setRotation((current) => current + event.movementX * 0.65);
+  };
+
+  const resetTilt = () => {
+    setDragging(false);
+    setTilt({ x: 0, y: 0 });
+  };
+
+  const stageStyle = {
+    '--stage-rotate': `${currentRotation}deg`,
+    '--stage-tilt-x': `${tilt.x}deg`,
+    '--stage-tilt-y': `${tilt.y}deg`,
+  } as CSSProperties;
+
+  return (
+    <div
+      className={`product-stage ${compact ? 'product-stage--compact' : ''}`}
+      style={stageStyle}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={handlePointerMove}
+      onPointerUp={resetTilt}
+      onPointerCancel={resetTilt}
+      onPointerLeave={() => { if (!dragging) setTilt({ x: 0, y: 0 }); }}
+      role="img"
+      aria-label={`${product.name} interactive 3D product view`}
+    >
+      <div className="product-stage__ambient" />
+      <div className="product-stage__grid" />
+      <div className="product-stage__orbit product-stage__orbit--one" />
+      <div className="product-stage__orbit product-stage__orbit--two" />
+      <div className="product-stage__object">
+        <div className="product-stage__shadow" />
+        <div className="product-stage__backdrop" />
+        <img src={product.image} alt="" draggable="false" />
+        <div className="product-stage__sheen" />
+      </div>
+      <div className="product-stage__hud product-stage__hud--top">
+        <span><span className="product-stage__status-dot" /> Live object study</span>
+        <span className="product-stage__hud-index">FV / 3D</span>
+      </div>
+      <div className="product-stage__hud product-stage__hud--bottom">
+        <span>Drag to orbit</span>
+        <span className="product-stage__controls">
+          <button type="button" onClick={(event) => { event.stopPropagation(); setRotation((current) => current - 30); }} aria-label="Rotate product left">−</button>
+          <span>{Math.round(((currentRotation % 360) + 360) % 360)}°</span>
+          <button type="button" onClick={(event) => { event.stopPropagation(); setRotation((current) => current + 30); }} aria-label="Rotate product right">+</button>
+        </span>
+      </div>
+      {!compact && <div className="product-stage__hotspot product-stage__hotspot--one"><span /> Hand-finished edge</div>}
+      {!compact && <div className="product-stage__hotspot product-stage__hotspot--two"><span /> Tactile materials</div>}
+    </div>
+  );
+}
+
+function ImmersiveStory({ product }: { product: Product }) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const section = sectionRef.current;
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const range = Math.max(1, rect.height - window.innerHeight);
+      setProgress(Math.max(0, Math.min(1, -rect.top / range)));
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+  const storyStyle = { '--story-progress': progress } as CSSProperties;
+  return (
+    <section ref={sectionRef} className="immersive-story" style={storyStyle}>
+      <div className="immersive-story__sticky">
+        <div className="immersive-story__stage">
+          <InteractiveProductStage product={product} rotation={progress * 140 - 55} autoRotate={false} />
+        </div>
+        <div className="immersive-story__copy">
+          <div className={`immersive-story__chapter ${progress < .34 ? 'is-active' : ''}`}>
+            <p className="eyebrow">01 / The silhouette</p>
+            <h2>Made to change the room around it.</h2>
+            <p>A low, generous profile with a little tension in the curve. The first thing you notice is the shape. The second is how naturally everything else settles around it.</p>
+          </div>
+          <div className={`immersive-story__chapter ${progress >= .34 && progress < .68 ? 'is-active' : ''}`}>
+            <p className="eyebrow">02 / The material</p>
+            <h2>Texture you can feel from across the room.</h2>
+            <p>{product.material} chosen for the way it catches a changing day — soft in the morning, warmer after dark, better with a little life on it.</p>
+          </div>
+          <div className={`immersive-story__chapter ${progress >= .68 ? 'is-active' : ''}`}>
+            <p className="eyebrow">03 / The point of view</p>
+            <h2>{product.name} is not background.</h2>
+            <p>It is the anchor, the pause, the place your eye returns to. Turn it, live with it, and find the angle that feels like yours.</p>
+          </div>
+        </div>
+        <div className="immersive-story__progress"><span /></div>
+      </div>
+    </section>
+  );
+}
+
 function Marquee({ text = defaultSiteContent.marquee }: { text?: string }) {
   return <div className="overflow-hidden border-y border-[#f3eee4]/15 py-4 font-mono-ui text-[10px] uppercase tracking-[.24em] text-[#f3eee4]/60"><div className="marquee-track flex w-max"><span className="flex items-center gap-8 pr-8">{text} <i className="h-1.5 w-1.5 rounded-full bg-[#bd8250]" /> {text} <i className="h-1.5 w-1.5 rounded-full bg-[#b99a63]" /> {text}</span><span className="flex items-center gap-8 pr-8">{text} <i className="h-1.5 w-1.5 rounded-full bg-[#bd8250]" /> {text} <i className="h-1.5 w-1.5 rounded-full bg-[#b99a63]" /> {text}</span></div></div>;
 }
@@ -531,7 +670,9 @@ function Home({ onAdd, liked, onLike, compared, onCompare }: { onAdd: (product: 
     <main>
       <section className="relative min-h-[720px] overflow-hidden bg-[#24231f] md:min-h-[820px]">
         <video ref={heroVideoRef} className="hero-intro-video absolute inset-0 h-full w-full object-cover object-center mix-blend-multiply opacity-70" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" poster={siteContent.heroPoster || defaultSiteContent.heroPoster} src={siteContent.heroVideo || defaultSiteContent.heroVideo} onPlay={() => setHeroVideoPlaying(true)} onPause={() => setHeroVideoPlaying(false)} />
-        <div className="hero-intro-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(25,36,54,.10),transparent_55%,rgba(220,229,108,.18))]" /><div className="hero-video-controls absolute bottom-7 right-5 z-10 flex items-center gap-2 md:bottom-10 md:right-10"><button type="button" onClick={toggleHeroVideo} className="flex items-center gap-2 rounded-full border border-[#f3eee4]/30 bg-[#0b0b0a]/35 px-3 py-2 font-mono-ui text-[9px] uppercase tracking-[.14em] text-[#f3eee4] backdrop-blur-md transition-colors hover:border-[#b99a63] hover:text-[#b99a63]" aria-label={heroVideoPlaying ? 'Pause intro video' : 'Play intro video'} data-testid="button-hero-video-toggle">{heroVideoPlaying ? <Pause size={12} /> : <Play size={12} fill="currentColor" />}<span className="hidden sm:inline">{heroVideoPlaying ? 'Pause' : 'Play'}</span></button><button type="button" onClick={replayHeroVideo} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#f3eee4]/30 bg-[#0b0b0a]/35 text-[#f3eee4] backdrop-blur-md transition-colors hover:border-[#b99a63] hover:text-[#b99a63]" aria-label="Replay intro video" data-testid="button-hero-video-replay"><RotateCcw size={12} /></button></div>
+         <div className="hero-intro-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(25,36,54,.10),transparent_55%,rgba(220,229,108,.18))]" />
+         <div className="home-product-stage" aria-hidden="true"><InteractiveProductStage product={featured} compact /></div>
+         <div className="hero-video-controls absolute bottom-7 right-5 z-10 flex items-center gap-2 md:bottom-10 md:right-10"><button type="button" onClick={toggleHeroVideo} className="flex items-center gap-2 rounded-full border border-[#f3eee4]/30 bg-[#0b0b0a]/35 px-3 py-2 font-mono-ui text-[9px] uppercase tracking-[.14em] text-[#f3eee4] backdrop-blur-md transition-colors hover:border-[#b99a63] hover:text-[#b99a63]" aria-label={heroVideoPlaying ? 'Pause intro video' : 'Play intro video'} data-testid="button-hero-video-toggle">{heroVideoPlaying ? <Pause size={12} /> : <Play size={12} fill="currentColor" />}<span className="hidden sm:inline">{heroVideoPlaying ? 'Pause' : 'Play'}</span></button><button type="button" onClick={replayHeroVideo} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#f3eee4]/30 bg-[#0b0b0a]/35 text-[#f3eee4] backdrop-blur-md transition-colors hover:border-[#b99a63] hover:text-[#b99a63]" aria-label="Replay intro video" data-testid="button-hero-video-replay"><RotateCcw size={12} /></button></div>
         <div className="relative mx-auto flex min-h-[720px] max-w-[1440px] flex-col justify-end px-5 pb-14 pt-32 md:min-h-[820px] md:px-10 md:pb-20">
           <div className="max-w-3xl page-reveal"><p className="font-mono-ui text-[10px] uppercase tracking-[.24em] text-[#f3eee4]/65">{siteContent.heroEyebrow}</p><h1 className="mt-5 max-w-3xl font-display text-[5.6rem] leading-[.78] tracking-[-.065em] text-[#f3eee4] md:text-[10.5rem]">{siteContent.heroTitle.split("\n").map((line, index) => <span key={line + index} className={index === siteContent.heroTitle.split("\n").length - 1 ? "block italic" : "block"}>{line}</span>)}</h1><p className="mt-6 max-w-md text-sm leading-6 text-[#f3eee4]/70">{siteContent.heroBody}</p><div className="mt-9 flex flex-wrap items-center gap-5"><Link href="/furniture" className="group flex items-center gap-3 rounded-full bg-[#0b0b0a] px-6 py-4 text-xs uppercase tracking-[.16em] text-[#f3eee4] transition-transform hover:scale-[1.03]" data-testid="link-hero-shop">Browse the collection <ArrowUpRight size={16} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></Link><button onClick={() => setShowVideo(true)} className="group flex items-center gap-3 text-xs uppercase tracking-[.16em] text-[#f3eee4]" data-testid="button-hero-film"><span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f3eee4]/40 transition-colors group-hover:bg-[#b99a63]"><Play size={13} fill="currentColor" /></span> Watch the film</button><Link href="#featured" className="group flex items-center gap-2 text-xs uppercase tracking-[.16em] text-[#f3eee4]/75 transition-colors hover:text-[#b99a63]" data-testid="link-hero-scene">Explore this room <ArrowDownRight size={15} className="transition-transform group-hover:translate-y-0.5" /></Link></div></div>
           <div className="mt-20 flex items-end justify-between border-t border-[#f3eee4]/25 pt-4 text-[#f3eee4]/60 page-reveal delay-3"><span className="font-mono-ui text-[10px] uppercase tracking-[.18em]">{siteContent.announcement}</span><span className="hidden max-w-[170px] text-right text-xs leading-5 md:block">A collection of shapes that give the day somewhere to land.</span><ArrowDownRight size={17} />
@@ -545,6 +686,7 @@ function Home({ onAdd, liked, onLike, compared, onCompare }: { onAdd: (product: 
           <div className="max-w-lg md:justify-self-end"><p className="text-xl leading-relaxed text-[#f3eee4]/70">Not a showroom of perfect rooms. A considered collection of pieces that leave space for your life to happen around them.</p><div className="mt-10 flex items-center gap-4 font-mono-ui text-[10px] uppercase tracking-[.18em]"><span className="pulse-line h-px w-16 origin-left bg-[#bd8250]" /> New York / Since 2024</div></div>
         </div>
       </section>
+      <ImmersiveStory product={products[1]} />
       <section id="featured" className="bg-[#171512] px-5 pb-28 md:px-10 md:pb-40">
         <div className="mx-auto max-w-[1440px]"><div className="flex items-end justify-between border-b border-[#f3eee4]/20 pb-5"><div><p className="eyebrow">A closer look</p><h2 className="mt-4 font-display text-5xl tracking-[-.04em] md:text-7xl">Objects in orbit</h2></div><Link href="/furniture" className="hidden items-center gap-2 text-xs uppercase tracking-[.15em] md:flex" data-testid="link-featured-all">View all pieces <ArrowRight size={15} /></Link></div>
           <div className="mt-9 grid gap-10 md:grid-cols-[.9fr_1.1fr]">
