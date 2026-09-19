@@ -8,6 +8,7 @@ import { loadCustomerOrders, saveCustomerOrder, type CustomerDetails, type Deliv
 import type { User } from 'firebase/auth';
 import { AdminDashboard } from './AdminDashboard';
 import { defaultSiteContent, loadSiteContent, type SiteContent } from './lib/site-content';
+import { RedesignedStorefront } from './RedesignedStorefront';
 
 type Category = 'Living' | 'Dining' | 'Bedroom' | 'Storage' | 'Kitchen';
 export type Product = { id: string; slug: string; name: string; category: Category; price: number; material: string; color: string; description: string; details: string[]; tags: string[]; image: string; badge?: string; collection: string; dimensions?: string; stock?: number };
@@ -250,7 +251,8 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent);
-  const [, setCatalogVersion] = useState(0);
+  const [catalogVersion, setCatalogVersion] = useState(0);
+  const [adminAccess, setAdminAccess] = useState(false);
   const addCart = (id: string) => setCart(current => current.some(l => l.productId === id) ? current.map(l => l.productId === id ? { ...l, quantity: l.quantity + 1 } : l) : [...current, { productId: id, quantity: 1 }]);
   const setQuantity = (id: string, quantity: number) => setCart(current => quantity < 1 ? current.filter(l => l.productId !== id) : current.map(l => l.productId === id ? { ...l, quantity } : l));
   const removeCart = (id: string) => setCart(current => current.filter(l => l.productId !== id));
@@ -265,9 +267,69 @@ function App() {
       products = fallbackProducts;
     }
   };
-  useEffect(() => { void reloadCatalog(); void loadSiteContent().then((content) => { if (content) setSiteContent(content); }); return subscribeToAuth((current) => { setUser(current); if (current) void loadCustomerOrders(current.uid).then(setOrders); else setOrders([]); }); }, []);
-  const store = { wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal: cart.reduce((sum, l) => sum + (getProduct(l.productId)?.price || 0) * l.quantity, 0), user };
-  return <StoreContext.Provider value={store}><div className="texture min-h-[100dvh]"><Header /><Switch><Route path="/" component={() => <Home content={siteContent} />} /><Route path="/shop" component={Shop} /><Route path="/product/:slug" component={ProductDetail} /><Route path="/wishlist" component={Wishlist} /><Route path="/cart" component={Cart} /><Route path="/account" component={() => <AccountPage user={user} orders={orders} />} /><Route path="/admin" component={() => <AdminDashboard user={user} onCatalogChange={reloadCatalog} />} /><Route component={NotFound} /></Switch></div></StoreContext.Provider>;
+  useEffect(() => {
+    void reloadCatalog();
+    void loadSiteContent().then((content) => { if (content) setSiteContent(content); });
+    return subscribeToAuth((current) => {
+      setUser(current);
+      setAdminAccess(false);
+      if (!current) {
+        setOrders([]);
+        return;
+      }
+      void loadCustomerOrders(current.uid).then(setOrders);
+      void isCurrentUserAdmin().then(setAdminAccess);
+    });
+  }, []);
+
+  const cartItems = useMemo(
+    () => cart.flatMap((line) => Array.from({ length: line.quantity }, () => getProduct(line.productId)).filter((product): product is Product => Boolean(product))),
+    [cart, catalogVersion],
+  );
+  const cartTotal = cartItems.reduce((sum, product) => sum + product.price, 0);
+  const placeOrder = async (customer: CustomerDetails) => {
+    if (!user) throw new Error('Sign in before placing an order.');
+    const now = new Date().toISOString();
+    const order: StoreOrder = {
+      id: 'order-' + Date.now(),
+      customerId: user.uid,
+      customer,
+      items: cart.map(({ productId, quantity }) => {
+        const product = getProduct(productId);
+        if (!product) throw new Error('One of the selected pieces is no longer available.');
+        return { id: product.id, name: product.name, price: product.price, image: product.image, material: product.material, quantity };
+      }),
+      total: cartTotal,
+      createdAt: now,
+      updatedAt: now,
+      status: 'New',
+      activity: [{ id: 'created-' + Date.now(), type: 'created', message: 'Order placed by customer', actorName: user.email || 'Customer', createdAt: now }],
+    };
+    await saveCustomerOrder(order);
+    setOrders((current) => [order, ...current]);
+  };
+
+  const storefront = (
+    <RedesignedStorefront
+      products={products}
+      cartItems={cartItems}
+      liked={wishlist}
+      user={user ? { uid: user.uid, email: user.email, displayName: user.displayName } : null}
+      orders={orders}
+      content={siteContent}
+      isAdmin={adminAccess}
+      onAdd={(product) => addCart(product.id)}
+      onRemove={removeCart}
+      onIncrement={addCart}
+      onDecrement={(id) => setQuantity(id, (cart.find((line) => line.productId === id)?.quantity || 1) - 1)}
+      onClear={() => setCart([])}
+      onLike={toggleWish}
+      onOrder={placeOrder}
+      onOrderChange={(updated) => setOrders((current) => current.map((order) => order.id === updated.id ? updated : order))}
+    />
+  );
+
+  return <StoreContext.Provider value={{ wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal, user }}><Switch><Route path="/admin" component={() => <AdminDashboard user={user} onCatalogChange={reloadCatalog} />} /><Route component={() => storefront} /></Switch></StoreContext.Provider>;
 }
 
 export default App;
