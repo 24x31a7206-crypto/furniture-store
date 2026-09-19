@@ -24,7 +24,7 @@ export type OrderStatus = (typeof orderStatuses)[number];
 
 export type OrderActivity = {
   id: string;
-  type: 'created' | 'status' | 'issue' | 'delivered';
+  type: 'created' | 'status' | 'issue' | 'delivered' | 'customer-updated' | 'cancelled';
   message: string;
   actorName?: string;
   createdAt: string;
@@ -92,6 +92,34 @@ export async function updateOrderStatus(orderId: string, status: string, actorNa
     createdAt: now,
   };
   await updateDoc(doc(db, 'orders', orderId), { status: status as OrderStatus, updatedAt: now, activity: arrayUnion(activity) });
+}
+
+export async function updateCustomerOrder(order: StoreOrder, customer: CustomerDetails, actorName = 'Customer') {
+  if (!db || !firebaseEnabled) throw new Error('Firebase is not configured.');
+  const now = new Date().toISOString();
+  const activity: OrderActivity = {
+    id: 'customer-' + Date.now(),
+    type: 'customer-updated',
+    message: 'Delivery details updated',
+    actorName,
+    createdAt: now,
+  };
+  await updateDoc(doc(db, 'orders', order.id), { customer, updatedAt: now, activity: arrayUnion(activity) });
+  return { ...order, customer, updatedAt: now, activity: [...(order.activity || []), activity] };
+}
+
+export async function cancelCustomerOrder(order: StoreOrder, actorName = 'Customer') {
+  if (!db || !firebaseEnabled) throw new Error('Firebase is not configured.');
+  const now = new Date().toISOString();
+  const activity: OrderActivity = {
+    id: 'cancel-' + Date.now(),
+    type: 'cancelled',
+    message: 'Order cancelled by customer',
+    actorName,
+    createdAt: now,
+  };
+  await updateDoc(doc(db, 'orders', order.id), { status: 'Cancelled', updatedAt: now, activity: arrayUnion(activity) });
+  return { ...order, status: 'Cancelled', updatedAt: now, activity: [...(order.activity || []), activity] };
 }
 
 export async function uploadDeliveryProof(orderId: string, file: File) {
