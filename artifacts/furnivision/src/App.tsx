@@ -1,26 +1,63 @@
 import { createContext, useContext, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Heart, Search, ShoppingBag, Menu, X, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
+import { Heart, Search, ShoppingBag, Menu, X, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import './index.css';
+import { createAccount, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
+import { loadCatalog, type CatalogProduct } from './lib/admin';
+import { loadCustomerOrders, type CustomerDetails, type StoreOrder } from './lib/orders';
+import type { User } from 'firebase/auth';
+import { AdminDashboard } from './AdminDashboard';
 
 type Category = 'Living' | 'Dining' | 'Bedroom' | 'Storage' | 'Kitchen';
-type Product = { id: string; slug: string; name: string; category: Category; price: number; material: string; color: string; description: string; details: string[]; tags: string[]; image: string; badge?: string };
+export type Product = { id: string; slug: string; name: string; category: Category; price: number; material: string; color: string; description: string; details: string[]; tags: string[]; image: string; badge?: string; collection: string; dimensions?: string; stock?: number };
 type CartLine = { productId: string; quantity: number };
 
-const products: Product[] = [
-  { id: 'p1', slug: 'serein-sofa', name: 'Serein Sofa', category: 'Living', price: 1890, material: 'Performance velvet', color: 'Deep pine', description: 'A generous, low-slung sofa with a tailored silhouette and a little room to exhale.', details: ['84" wide x 36" deep x 31" high', 'Kiln-dried hardwood frame', 'Performance velvet upholstery', 'Made to order in 6–8 weeks'], tags: ['sofa', 'seating', 'new', 'green'], image: '/assets/hero-room.jpg', badge: 'Signature piece' },
-  { id: 'p2', slug: 'halo-lounge-chair', name: 'Halo Lounge Chair', category: 'Living', price: 820, material: 'Bouclé', color: 'Oat', description: 'A sculptural seat that softens a room through curve, texture, and a low, grounded profile.', details: ['31" wide x 31" deep x 28" high', 'FSC-certified ash base', 'Textured bouclé upholstery', 'Ships in 2–3 weeks'], tags: ['chair', 'seating', 'boucle', 'soft'], image: '/assets/halo-lounge-chair.jpg', badge: 'Bestseller' },
-  { id: 'p3', slug: 'mesa-dining-table', name: 'Mesa Dining Table', category: 'Dining', price: 1640, material: 'Smoked oak', color: 'Walnut', description: 'An easygoing table with softened corners, built for long lunches and everyday rituals.', details: ['78" wide x 38" deep x 30" high', 'Solid smoked oak', 'Hand-finished natural oil', 'Seats 6 comfortably'], tags: ['table', 'dining', 'oak', 'wood'], image: '/assets/mesa-dining-table.jpg' },
-  { id: 'p4', slug: 'linea-media-console', name: 'Linea Media Console', category: 'Storage', price: 1290, material: 'American walnut', color: 'Dark walnut', description: 'Quiet storage with a warm grain, cable management, and just enough display space.', details: ['72" wide x 18" deep x 24" high', 'American walnut veneer', 'Soft-close doors', 'Adjustable interior shelf'], tags: ['console', 'storage', 'walnut', 'media'], image: '/assets/linea-tv-unit.jpg' },
-  { id: 'p5', slug: 'nest-upholstered-bed', name: 'Nest Upholstered Bed', category: 'Bedroom', price: 2140, material: 'Linen blend', color: 'Clay', description: 'A softly architectural bed that makes the bedroom feel like a place to land.', details: ['Queen: 65" wide x 88" long', 'Slat system included', 'Linen blend upholstery', 'No box spring required'], tags: ['bed', 'bedroom', 'linen', 'soft'], image: '/assets/nest-bed.jpg', badge: 'New arrival' },
-  { id: 'p6', slug: 'arc-entry-cabinet', name: 'Arc Entry Cabinet', category: 'Storage', price: 980, material: 'Solid walnut', color: 'Espresso', description: 'A tall, slatted cabinet for the daily choreography of coming home.', details: ['36" wide x 18" deep x 72" high', 'Solid walnut doors', 'Three adjustable shelves', 'Anti-tip hardware included'], tags: ['cabinet', 'storage', 'entryway', 'walnut'], image: '/assets/arc-shoe-rack.jpg' },
-  { id: 'p7', slug: 'atelier-kitchen-run', name: 'Atelier Kitchen Run', category: 'Kitchen', price: 3480, material: 'Painted oak', color: 'Moss', description: 'A considered run of cabinetry where prep, storage, and beauty share the same line.', details: ['Custom dimensions available', 'Painted oak fronts', 'Brass hardware included', 'Designed in 4–6 weeks'], tags: ['kitchen', 'cabinetry', 'moss', 'custom'], image: '/assets/atelier-kitchen.jpg', badge: 'Made to measure' },
-  { id: 'p8', slug: 'room-study-print', name: 'Room Study No. 01', category: 'Living', price: 140, material: 'Cotton rag paper', color: 'Ecru', description: 'A quiet abstract study of proportion, light, and the spaces between objects.', details: ['24" x 32" unframed', 'Archival cotton rag paper', 'Signed studio edition', 'Ships flat in 3–5 days'], tags: ['art', 'print', 'wall', 'studio'], image: '/assets/room-detail.jpg' },
+const fallbackProducts: Product[] = [
+  { id: 'p1', slug: 'serein-sofa', name: 'Serein Sofa', category: 'Living', collection: 'Living room', price: 1890, material: 'Performance velvet', color: 'Deep pine', description: 'A generous, low-slung sofa with a tailored silhouette and a little room to exhale.', details: ['84" wide x 36" deep x 31" high', 'Kiln-dried hardwood frame', 'Performance velvet upholstery', 'Made to order in 6–8 weeks'], tags: ['sofa', 'seating', 'new', 'green'], image: '/assets/hero-room.jpg', badge: 'Signature piece' },
+  { id: 'p2', slug: 'halo-lounge-chair', name: 'Halo Lounge Chair', category: 'Living', collection: 'Lounge', price: 820, material: 'Bouclé', color: 'Oat', description: 'A sculptural seat that softens a room through curve, texture, and a low, grounded profile.', details: ['31" wide x 31" deep x 28" high', 'FSC-certified ash base', 'Textured bouclé upholstery', 'Ships in 2–3 weeks'], tags: ['chair', 'seating', 'boucle', 'soft'], image: '/assets/halo-lounge-chair.jpg', badge: 'Bestseller' },
+  { id: 'p3', slug: 'mesa-dining-table', name: 'Mesa Dining Table', category: 'Dining', collection: 'Dining tables', price: 1640, material: 'Smoked oak', color: 'Walnut', description: 'An easygoing table with softened corners, built for long lunches and everyday rituals.', details: ['78" wide x 38" deep x 30" high', 'Solid smoked oak', 'Hand-finished natural oil', 'Seats 6 comfortably'], tags: ['table', 'dining', 'oak', 'wood'], image: '/assets/mesa-dining-table.jpg' },
+  { id: 'p4', slug: 'linea-media-console', name: 'Linea Media Console', category: 'Storage', collection: 'TV units', price: 1290, material: 'American walnut', color: 'Dark walnut', description: 'Quiet storage with a warm grain, cable management, and just enough display space.', details: ['72" wide x 18" deep x 24" high', 'American walnut veneer', 'Soft-close doors', 'Adjustable interior shelf'], tags: ['console', 'storage', 'walnut', 'media'], image: '/assets/linea-tv-unit.jpg' },
+  { id: 'p5', slug: 'nest-upholstered-bed', name: 'Nest Upholstered Bed', category: 'Bedroom', collection: 'Beds', price: 2140, material: 'Linen blend', color: 'Clay', description: 'A softly architectural bed that makes the bedroom feel like a place to land.', details: ['Queen: 65" wide x 88" long', 'Slat system included', 'Linen blend upholstery', 'No box spring required'], tags: ['bed', 'bedroom', 'linen', 'soft'], image: '/assets/nest-bed.jpg', badge: 'New arrival' },
+  { id: 'p6', slug: 'arc-entry-cabinet', name: 'Arc Entry Cabinet', category: 'Storage', collection: 'Shoe racks', price: 980, material: 'Solid walnut', color: 'Espresso', description: 'A tall, slatted cabinet for the daily choreography of coming home.', details: ['36" wide x 18" deep x 72" high', 'Solid walnut doors', 'Three adjustable shelves', 'Anti-tip hardware included'], tags: ['cabinet', 'storage', 'entryway', 'walnut'], image: '/assets/arc-shoe-rack.jpg' },
+  { id: 'p7', slug: 'atelier-kitchen-run', name: 'Atelier Kitchen Run', category: 'Kitchen', collection: 'Kitchen cabinets', price: 3480, material: 'Painted oak', color: 'Moss', description: 'A considered run of cabinetry where prep, storage, and beauty share the same line.', details: ['Custom dimensions available', 'Painted oak fronts', 'Brass hardware included', 'Designed in 4–6 weeks'], tags: ['kitchen', 'cabinetry', 'moss', 'custom'], image: '/assets/atelier-kitchen.jpg', badge: 'Made to measure' },
+  { id: 'p8', slug: 'room-study-print', name: 'Room Study No. 01', category: 'Living', collection: 'Living room', price: 140, material: 'Cotton rag paper', color: 'Ecru', description: 'A quiet abstract study of proportion, light, and the spaces between objects.', details: ['24" x 32" unframed', 'Archival cotton rag paper', 'Signed studio edition', 'Ships flat in 3–5 days'], tags: ['art', 'print', 'wall', 'studio'], image: '/assets/room-detail.jpg' },
 ];
 
+let products = fallbackProducts;
 const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 const getProduct = (id: string) => products.find((p) => p.id === id);
 const readUrlParams = () => new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
+
+const collectionToCategory = (collection: string): Category => {
+  const value = collection.toLowerCase();
+  if (value.includes('bed') || value.includes('mattress')) return 'Bedroom';
+  if (value.includes('dining') || value.includes('table')) return 'Dining';
+  if (value.includes('kitchen')) return 'Kitchen';
+  if (value.includes('storage') || value.includes('rack') || value.includes('wardrobe') || value.includes('unit') || value.includes('cabinet')) return 'Storage';
+  return 'Living';
+};
+
+const catalogToProduct = (product: CatalogProduct): Product => ({
+  ...product,
+  slug: product.id,
+  category: collectionToCategory(product.collection),
+  details: [product.dimensions, product.material, product.stock > 0 ? `${product.stock} in stock` : 'Made to order'].filter(Boolean),
+  tags: [product.collection, product.material, product.color].filter(Boolean),
+});
+
+async function shareProduct(product: Product) {
+  const url = `${window.location.origin}/product/${product.slug}`;
+  const shareData = { title: product.name, text: `${product.name} — ${money(product.price)} at FurniVision`, url };
+  try {
+    if (navigator.share) await navigator.share(shareData);
+    else {
+      await navigator.clipboard.writeText(url);
+      window.alert('Product link copied to your clipboard.');
+    }
+  } catch {
+    // Sharing was dismissed; do not interrupt the shopping flow.
+  }
+}
 
 function useStored<T>(key: string, initial: T) {
   const [value, setValue] = useState<T>(() => {
@@ -71,6 +108,7 @@ function Header() {
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search pieces" aria-label="Search the catalog" className="w-32 bg-transparent py-2 text-sm outline-none placeholder:text-[hsl(var(--muted-foreground))] focus:w-48 transition-[width]" data-testid="input-header-search" />
           </form>
           <Link href="/wishlist" aria-label={`Wishlist, ${wishlist.length} saved`} className="relative" data-testid="link-wishlist"><Heart size={19} strokeWidth={1.7} /><span className="sr-only">Wishlist</span>{wishlist.length > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[hsl(var(--accent))] px-1 font-mono-ui text-[9px] text-white">{wishlist.length}</span>}</Link>
+          <Link href="/account" aria-label="Account" data-testid="link-account"><UserRound size={19} strokeWidth={1.7} /></Link>
           <Link href="/cart" aria-label={`Cart, ${cartCount} items`} className="relative" data-testid="link-cart"><ShoppingBag size={19} strokeWidth={1.7} /><span className="sr-only">Cart</span>{cartCount > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[hsl(var(--primary))] px-1 font-mono-ui text-[9px] text-[hsl(var(--primary-foreground))]">{cartCount}</span>}</Link>
         </div>
       </div>
@@ -103,7 +141,10 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     <div className="relative overflow-hidden bg-[hsl(var(--secondary))]">
       <Link href={`/product/${product.slug}`} data-testid={`link-product-${product.id}`}><div className="aspect-[4/5] overflow-hidden"><img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" /></div></Link>
       {product.badge && <span className="absolute left-3 top-3 bg-[hsl(var(--background)/.88)] px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[.13em]">{product.badge}</span>}
-      <button onClick={() => toggleWish(product.id)} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} className={`absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--background)/.9)] transition hover:scale-105 ${saved ? 'text-[hsl(var(--accent))]' : ''}`} data-testid={`button-wishlist-${product.id}`}><Heart size={17} fill={saved ? 'currentColor' : 'none'} strokeWidth={1.7} /></button>
+      <div className="absolute right-3 top-3 flex gap-2">
+        <button onClick={() => void shareProduct(product)} aria-label={`Share ${product.name}`} className="grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--background)/.9)] transition hover:scale-105" data-testid={`button-share-${product.id}`}><Share2 size={16} strokeWidth={1.7} /></button>
+        <button onClick={() => toggleWish(product.id)} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} className={`grid h-9 w-9 place-items-center rounded-full bg-[hsl(var(--background)/.9)] transition hover:scale-105 ${saved ? 'text-[hsl(var(--accent))]' : ''}`} data-testid={`button-wishlist-${product.id}`}><Heart size={17} fill={saved ? 'currentColor' : 'none'} strokeWidth={1.7} /></button>
+      </div>
     </div>
     <div className="flex items-start justify-between gap-3 pt-3"><Link href={`/product/${product.slug}`} className="min-w-0" data-testid={`link-product-name-${product.id}`}><p className="text-sm font-semibold">{product.name}</p><p className="mt-1 font-mono-ui text-[10px] uppercase tracking-[.12em] text-[hsl(var(--muted-foreground))]">{product.category} / {product.material}</p></Link><p className="shrink-0 text-sm">{money(product.price)}</p></div>
     <button onClick={() => addCart(product.id)} className="mt-3 flex w-full items-center justify-between border-b border-[hsl(var(--foreground)/.23)] pb-2 text-left text-xs font-semibold opacity-70 transition hover:border-[hsl(var(--accent))] hover:text-[hsl(var(--accent))] hover:opacity-100" data-testid={`button-add-${product.id}`}><span>Add to cart</span><ArrowRight size={15} /></button>
@@ -170,17 +211,56 @@ function CheckoutForm({ onDone }: { onDone: () => void }) {
   return <div className="grid gap-12 lg:grid-cols-[1fr_380px]"><div><button onClick={() => window.history.back()} className="mb-8 inline-flex items-center gap-2 text-xs font-semibold" data-testid="button-back-cart"><ArrowLeft size={15} /> Back to cart</button><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">Almost home</p><h1 className="mt-4 font-display text-6xl leading-[.9] tracking-[-.05em] md:text-8xl">Checkout.</h1><form onSubmit={submit} className="mt-12 grid gap-8"><fieldset className="grid gap-5"><legend className="mb-1 font-display text-2xl">Contact</legend><label className="grid gap-2 text-xs font-semibold">Email<input required type="email" placeholder="you@example.com" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="input-checkout-email" /></label></fieldset><fieldset className="grid gap-5"><legend className="mb-1 font-display text-2xl">Delivery address</legend><div className="grid gap-5 md:grid-cols-2"><label className="grid gap-2 text-xs font-semibold md:col-span-2">Full name<input required placeholder="Your name" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="input-checkout-name" /></label><label className="grid gap-2 text-xs font-semibold md:col-span-2">Address<input required placeholder="Street and number" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="input-checkout-address" /></label><label className="grid gap-2 text-xs font-semibold">City<input required placeholder="City" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="input-checkout-city" /></label><label className="grid gap-2 text-xs font-semibold">Postal code<input required placeholder="Postal code" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="input-checkout-postal" /></label></div></fieldset><fieldset className="grid gap-5"><legend className="mb-1 font-display text-2xl">Payment</legend><label className="grid gap-2 text-xs font-semibold">Card number<input required inputMode="numeric" placeholder="4242 4242 4242 4242" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="input-checkout-card" /></label><div className="grid gap-5 md:grid-cols-2"><label className="grid gap-2 text-xs font-semibold">Expiry<input required placeholder="MM / YY" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none" data-testid="input-checkout-expiry" /></label><label className="grid gap-2 text-xs font-semibold">CVC<input required placeholder="123" className="border-b border-[hsl(var(--foreground)/.3)] bg-transparent px-0 py-3 text-sm outline-none" data-testid="input-checkout-cvc" /></label></div></fieldset><button disabled={busy} className="mt-2 flex items-center justify-center gap-3 bg-[hsl(var(--primary))] px-5 py-4 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60" data-testid="button-place-order">{busy ? 'Confirming your order…' : <>Place demo order <ArrowRight size={16} /></>}</button></form></div><div className="hidden bg-[hsl(var(--secondary))] p-7 lg:block"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em]">The FurniVision promise</p><div className="mt-8 grid gap-7"><div><Truck className="mb-3 text-[hsl(var(--accent))]" size={21} /><p className="font-semibold">Room-ready delivery</p><p className="mt-1 text-sm leading-5 text-[hsl(var(--muted-foreground))]">We bring it in, place it, and take the packaging with us.</p></div><div><ShieldCheck className="mb-3 text-[hsl(var(--accent))]" size={21} /><p className="font-semibold">Secure checkout</p><p className="mt-1 text-sm leading-5 text-[hsl(var(--muted-foreground))]">This is a demo checkout — no payment is processed.</p></div></div></div></div>;
 }
 
+function AccountPage({ user, orders }: { user: User | null; orders: StoreOrder[] }) {
+  const [, setLocation] = useLocation();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const finishAuth = async (action: () => Promise<AuthResult>) => {
+    setBusy(true);
+    setMessage('');
+    const result = await action();
+    if (result.user) setLocation('/');
+    else setMessage(result.error || 'Please try again.');
+    setBusy(false);
+  };
+
+  if (!user) return <main className="mx-auto grid min-h-[calc(100svh-72px)] max-w-5xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:px-8">
+    <div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">FurniVision / Your account</p><h1 className="mt-5 font-display text-6xl leading-[.9] tracking-[-.05em]">Keep the<br /><em>good stuff.</em></h1><p className="mt-6 max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">Save pieces, place orders, and keep delivery details in one place. Store owners can also open the admin control room here.</p></div>
+    <div className="border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] p-6 md:p-8"><div className="mb-7 flex border-b border-[hsl(var(--border))]"><button onClick={() => setMode('signin')} className={`flex-1 pb-3 text-sm font-semibold ${mode === 'signin' ? 'border-b-2 border-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>Sign in</button><button onClick={() => setMode('signup')} className={`flex-1 pb-3 text-sm font-semibold ${mode === 'signup' ? 'border-b-2 border-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>Sign up</button></div><form onSubmit={(event) => { event.preventDefault(); void finishAuth(() => mode === 'signin' ? signIn(email, password) : createAccount(email, password)); }} className="grid gap-5"><label className="grid gap-2 text-xs font-semibold">Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label><label className="grid gap-2 text-xs font-semibold">Password<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>{message && <p className="text-sm text-[hsl(var(--destructive))]" role="alert">{message}</p>}<button disabled={busy} className="flex items-center justify-center gap-2 bg-[hsl(var(--primary))] px-5 py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"><LockKeyhole size={15} /> {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button></form><div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[.15em] text-[hsl(var(--muted-foreground))]"><span className="h-px flex-1 bg-[hsl(var(--border))]" />or<span className="h-px flex-1 bg-[hsl(var(--border))]" /></div><button disabled={busy} onClick={() => void finishAuth(signInWithGoogle)} className="w-full border border-[hsl(var(--foreground)/.25)] px-5 py-3 text-sm font-semibold disabled:opacity-60">Continue with Google</button><p className="mt-5 text-center text-xs leading-5 text-[hsl(var(--muted-foreground))]">The first account claimed from the Admin room becomes the protected storefront owner.</p></div>
+  </main>;
+
+  return <main className="mx-auto max-w-5xl px-5 py-12 md:px-8 md:py-20"><div className="flex flex-wrap items-end justify-between gap-5 border-b border-[hsl(var(--border))] pb-8"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">FurniVision / Account</p><h1 className="mt-4 font-display text-6xl leading-[.9]">Good to<br /><em>see you.</em></h1><p className="mt-5 text-sm text-[hsl(var(--muted-foreground))]">{user.email}</p></div><div className="flex gap-3"><Link href="/admin" className="inline-flex items-center gap-2 bg-[hsl(var(--primary))] px-4 py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))]">Admin room <ShieldCheck size={15} /></Link><button onClick={() => void signOutUser()} className="border border-[hsl(var(--border))] px-4 py-3 text-sm font-semibold">Sign out</button></div></div><section className="mt-10"><div className="flex items-end justify-between"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">Your pieces</p><h2 className="mt-2 font-display text-4xl">Order history</h2></div><span className="font-mono-ui text-xs text-[hsl(var(--muted-foreground))]">{orders.length} orders</span></div>{orders.length ? <div className="mt-6 divide-y divide-[hsl(var(--border))] border-y border-[hsl(var(--border))]">{orders.map((order) => <article className="flex flex-wrap items-center justify-between gap-4 py-5" key={order.id}><div><p className="font-mono-ui text-[10px] uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">{order.id} · {new Date(order.createdAt).toLocaleDateString()}</p><h3 className="mt-2 text-sm font-semibold">{order.items.map((item) => item.name).join(', ')}</h3><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{order.status} · {order.customer.city}</p></div><strong>{money(order.total)}</strong></article>)}</div> : <div className="mt-6 border border-dashed border-[hsl(var(--border))] p-10 text-center"><p className="font-display text-3xl">Your first room is still ahead.</p><Link href="/shop" className="mt-5 inline-flex border-b border-[hsl(var(--foreground))] pb-1 text-sm font-semibold">Shop the collection</Link></div>}</section></main>;
+}
+
 function NotFound() { return <main className="grid min-h-[calc(100svh-72px)] place-items-center px-5 text-center"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">404 / wrong room</p><h1 className="mt-5 font-display text-7xl">Not here.</h1><p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">The piece you’re looking for may have moved.</p><Link href="/shop" className="mt-7 inline-flex items-center gap-2 border-b border-[hsl(var(--foreground))] pb-2 text-sm font-semibold" data-testid="link-notfound-shop">Back to shop <ArrowRight size={15} /></Link></div></main>; }
 
 function App() {
   const [wishlist, setWishlist] = useStored<string[]>('furnivision-wishlist', []);
   const [cart, setCart] = useStored<CartLine[]>('furnivision-cart', []);
+  const [user, setUser] = useState<User | null>(null);
+  const [orders, setOrders] = useState<StoreOrder[]>([]);
+  const [, setCatalogVersion] = useState(0);
   const addCart = (id: string) => setCart(current => current.some(l => l.productId === id) ? current.map(l => l.productId === id ? { ...l, quantity: l.quantity + 1 } : l) : [...current, { productId: id, quantity: 1 }]);
   const setQuantity = (id: string, quantity: number) => setCart(current => quantity < 1 ? current.filter(l => l.productId !== id) : current.map(l => l.productId === id ? { ...l, quantity } : l));
   const removeCart = (id: string) => setCart(current => current.filter(l => l.productId !== id));
   const toggleWish = (id: string) => setWishlist(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
+  const reloadCatalog = async () => {
+    try {
+      const catalog = await loadCatalog();
+      if (catalog && catalog.length > 0) products = catalog.map(catalogToProduct);
+      else products = fallbackProducts;
+      setCatalogVersion((value) => value + 1);
+    } catch {
+      products = fallbackProducts;
+    }
+  };
+  useEffect(() => { void reloadCatalog(); return subscribeToAuth((current) => { setUser(current); if (current) void loadCustomerOrders(current.uid).then(setOrders); else setOrders([]); }); }, []);
   const store = { wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal: cart.reduce((sum, l) => sum + (getProduct(l.productId)?.price || 0) * l.quantity, 0) };
-  return <StoreContext.Provider value={store}><div className="texture min-h-[100dvh]"><Header /><Switch><Route path="/" component={Home} /><Route path="/shop" component={Shop} /><Route path="/product/:slug" component={ProductDetail} /><Route path="/wishlist" component={Wishlist} /><Route path="/cart" component={Cart} /><Route component={NotFound} /></Switch></div></StoreContext.Provider>;
+  return <StoreContext.Provider value={store}><div className="texture min-h-[100dvh]"><Header /><Switch><Route path="/" component={Home} /><Route path="/shop" component={Shop} /><Route path="/product/:slug" component={ProductDetail} /><Route path="/wishlist" component={Wishlist} /><Route path="/cart" component={Cart} /><Route path="/account" component={() => <AccountPage user={user} orders={orders} />} /><Route path="/admin" component={() => <AdminDashboard user={user} onCatalogChange={reloadCatalog} />} /><Route component={NotFound} /></Switch></div></StoreContext.Provider>;
 }
 
 export default App;
