@@ -47,28 +47,20 @@ is the first account used after the rules are deployed. Deploy the rules with:
 
 `firebase deploy --only firestore:rules,storage`
 
-## 4. Worker accounts and order assignment
+## 4. Direct admin order and delivery workflow
 
-The owner opens `/admin`, signs in with the owner account, and uses the
-**Workers** panel to create a worker account with a name, email, and temporary
-password. Share that password with the worker securely; it is intentionally
-not stored or shown again in the admin UI.
+Orders are managed directly by the storefront owner from /admin. There are no worker accounts or assignment steps.
 
-Workers sign in at `/admin` with those credentials. The app identifies the
-worker from the Firebase `workers/{uid}` profile and sends them directly to
-`/worker`. Their panel only loads orders whose `assignedWorkerId` matches their
-Firebase user ID. They can see the customer delivery details and update the
-delivery status, but cannot assign orders or read other workers' orders.
+Use the **Orders** panel to search orders, filter by status, and move each order through:
 
-Customer checkout requires a signed-in Firebase customer account so the order
-can be securely written to the protected top-level `orders` collection. The
-owner assigns each order from the **Orders** panel. Firestore rules enforce
-these restrictions even if someone tries to call the client directly.
+- New
+- Confirmed
+- Preparing
+- Ready for delivery
+- Out for delivery
+- Delivered
+- Issue or Cancelled
 
-## 5. Payments
+Status changes are recorded in the order activity timeline. The admin can also upload an optional delivery proof photo and add completion notes from the same order card.
 
-Stripe was intentionally not connected in this workspace. The checkout
-surface records a clearly marked demo order, but it never collects card data.
-Connect Stripe before launch so a server-side checkout session can validate
-prices and inventory, create the payment intent, and confirm the order from a
-verified webhook.
+The owner account is the first account registered in adminConfig/primary; it is the only account allowed to manage products, orders, homepage content, and delivery proof uploads.
