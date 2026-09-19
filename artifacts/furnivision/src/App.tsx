@@ -9,8 +9,9 @@ import { uploadRoomPhoto } from './lib/room-storage';
 import { defaultSiteContent, loadSiteContent, saveSiteContent, type SiteContent } from './lib/site-content';
 import { uploadSiteAsset } from './lib/site-storage';
 import { cancelCustomerOrder, loadAllOrders, orderStatuses, saveCustomerOrder, saveDeliveryProof, updateCustomerOrder, updateOrderStatus, uploadDeliveryProof, type CustomerDetails, type StoreOrder } from './lib/orders';
+import { RedesignedStorefront } from './RedesignedStorefront';
 
-type Product = {
+export type Product = {
   id: string;
   name: string;
   collection: string;
@@ -28,7 +29,7 @@ type Product = {
   badge?: string;
 };
 
-const products: Product[] = [
+export const products: Product[] = [
   {
     id: 'arc-sofa',
     name: 'Arc Sofa',
@@ -1094,8 +1095,7 @@ function App() {
   const compareProducts = products.filter((product) => compared.includes(product.id));
   const saveRoom = (room: string, selected: string, photo: string | null) => setSavedRooms((rooms) => [...rooms, { room, selected, photo }]);
   if (location === '/admin') return <div className="grain min-h-[100dvh]"><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} userLabel={user?.displayName || user?.email?.split('@')[0]} /><AdminPage user={user} /><Footer /><BagDrawer open={bagOpen} onClose={() => setBagOpen(false)} items={cartItems} onRemove={removeFromCart} /><MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} /></div>;
-  if (location === '/account') return <div className="grain min-h-[100dvh]"><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} userLabel={user?.displayName || user?.email?.split('@')[0]} /><AccountPage user={user} orders={orders} onOrderChange={(updatedOrder) => setOrders((current) => current.map((order) => order.id === updatedOrder.id ? updatedOrder : order))} /><Footer /><BagDrawer open={bagOpen} onClose={() => setBagOpen(false)} items={cartItems} onRemove={removeFromCart} /><MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} /></div>;
-  return <div className="grain min-h-[100dvh]"><Switch><Route path="/"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><Home onAdd={addToCart} liked={liked} onLike={toggleLike} compared={compared} onCompare={toggleCompare} /><Footer /></></Route><Route path="/furniture"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><FurniturePage onAdd={addToCart} liked={liked} onLike={toggleLike} compared={compared} onCompare={toggleCompare} /><Footer /></></Route><Route path="/furniture/category/:categorySlug"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><CollectionPage onAdd={addToCart} liked={liked} onLike={toggleLike} compared={compared} onCompare={toggleCompare} /><Footer /></></Route><Route path="/furniture/:productId"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><ProductPage onAdd={addToCart} /><Footer /></></Route><Route path="/wishlist"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><WishlistPage onAdd={addToCart} liked={liked} onLike={toggleLike} compared={compared} onCompare={toggleCompare} /><Footer /></></Route><Route path="/saved-rooms"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><SavedRoomsPage rooms={savedRooms} /><Footer /></></Route><Route path="/checkout"><><Header cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><CheckoutPage items={cartItems} user={user} onRemove={removeFromCart} onOrder={placeOrder} /><Footer /></></Route><Route path="/inspiration"><><Header light cartCount={cartItems.length} onCart={() => setBagOpen(true)} onMenu={() => setMenuOpen(true)} /><InspirationPage /><Footer /></></Route><Route component={NotFound} /></Switch><BagDrawer open={bagOpen} onClose={() => setBagOpen(false)} items={cartItems} onRemove={removeFromCart} /><CompareTray items={compareProducts} open={compareOpen} onToggle={() => setCompareOpen((open) => !open)} onRemove={toggleCompare} /><MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} /></div>;
+  return <RedesignedStorefront products={products} cartItems={cartItems} liked={liked} user={user} orders={orders} onAdd={addToCart} onRemove={removeFromCart} onIncrement={incrementCart} onDecrement={decrementCart} onClear={clearCart} onLike={toggleLike} onOrder={placeOrder} onOrderChange={(updatedOrder) => setOrders((current) => current.map((order) => order.id === updatedOrder.id ? updatedOrder : order))} />;
 }
 
 export default App;
