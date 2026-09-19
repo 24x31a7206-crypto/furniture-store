@@ -17,7 +17,7 @@ service cloud.firestore {
           (
             resource.data.status in ['New', 'Confirmed', 'Preparing']
             && request.resource.data.status == resource.data.status
-            && request.resource.data.customer.diff(resource.data.customer).affectedKeys().hasOnly(['address', 'city', 'deliveryWindow'])
+            && request.resource.data.customer.diff(resource.data.customer).affectedKeys().hasOnly(['address', 'city', 'postalCode', 'deliveryWindow', 'location'])
           )
           || (
             resource.data.status in ['New', 'Confirmed', 'Preparing', 'Ready for delivery']
