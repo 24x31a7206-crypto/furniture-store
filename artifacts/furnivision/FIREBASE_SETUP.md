@@ -33,17 +33,18 @@ than committing a `.env` file:
 
 The app initializes Firebase only when all six values are present.
 
-## 3. First-user ownership and security model
+## 3. Admin ownership and security model
 
-- The first account that successfully signs in is atomically recorded as the storefront owner.
+- Create or sign in to the intended owner account, then open `/admin`. The first account that successfully claims the Admin room is atomically recorded as the storefront owner.
 - Only that owner can publish products, homepage content, and site media.
 - The owner record lives at `adminConfig/primary` and cannot be replaced or deleted from the public app.
 - Regular signed-in users can read and write only their own `users/{uid}/...` data.
 - Review creation and edits are scoped to the signed-in review owner.
 - Room uploads are scoped to the owner, limited to images under 10 MB.
 
-The first person to sign in becomes the admin, so make sure the intended owner
-is the first account used after the rules are deployed. Deploy the rules with:
+The intended owner should be the first person to claim `/admin` after the rules
+are deployed. Customer sign-in and Google sign-in do not grant admin access by
+themselves. Deploy the rules with:
 
 `firebase deploy --only firestore:rules,storage`
 
