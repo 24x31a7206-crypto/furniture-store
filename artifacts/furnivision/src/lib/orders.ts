@@ -35,7 +35,6 @@ export type ProofOfDelivery = {
   notes?: string;
   deliveredAt: string;
   deliveredBy?: string;
-  workerId?: string;
 };
 
 export type StoreOrder = {
@@ -49,8 +48,22 @@ export type StoreOrder = {
   updatedAt?: string;
   activity?: OrderActivity[];
   proofOfDelivery?: ProofOfDelivery;
+  /** Legacy fields are read-only compatibility for orders created before the direct workflow. */
   assignedWorkerId?: string;
   assignedWorkerName?: string;
+};
+
+const legacyStatusMap: Record<string, OrderStatus> = {
+  Assigned: 'Ready for delivery',
+  'Picked up': 'Preparing',
+  'Out for delivery': 'Out for delivery',
+  Delivered: 'Delivered',
+  Issue: 'Issue',
+};
+
+const normalizeStatus = (status: unknown): OrderStatus => {
+  const value = String(status || 'New');
+  return orderStatuses.includes(value as OrderStatus) ? value as OrderStatus : legacyStatusMap[value] || 'New';
 };
 
 export async function saveCustomerOrder(order: StoreOrder) {
@@ -61,7 +74,10 @@ export async function saveCustomerOrder(order: StoreOrder) {
 export async function loadAllOrders(): Promise<StoreOrder[]> {
   if (!db || !firebaseEnabled) return [];
   const snapshot = await getDocs(collection(db, 'orders'));
-  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as StoreOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return snapshot.docs.map((item) => {
+    const data = item.data() as Omit<StoreOrder, 'id'>;
+    return { id: item.id, ...data, status: normalizeStatus(data.status) } as StoreOrder;
+  }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function updateOrderStatus(orderId: string, status: string, actorName?: string, note?: string) {
@@ -80,6 +96,7 @@ export async function updateOrderStatus(orderId: string, status: string, actorNa
 
 export async function uploadDeliveryProof(orderId: string, file: File) {
   if (!storage || !firebaseEnabled) throw new Error('Firebase storage is not configured.');
+  if (!file.type.startsWith('image/')) throw new Error('Choose an image for delivery proof.');
   const safeName = file.name.replace(/[^a-z0-9._-]/gi, '-').toLowerCase();
   const fileRef = ref(storage, 'deliveries/' + orderId + '/' + Date.now() + '-' + safeName);
   await uploadBytes(fileRef, file, { contentType: file.type });
