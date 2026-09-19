@@ -26,6 +26,7 @@ export type OrderItem = {
   price: number;
   image: string;
   material: string;
+  quantity?: number;
 };
 
 export const orderStatuses = ['New', 'Confirmed', 'Preparing', 'Ready for delivery', 'Out for delivery', 'Delivered', 'Issue', 'Cancelled'] as const;
