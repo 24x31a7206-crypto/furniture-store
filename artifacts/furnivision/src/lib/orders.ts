@@ -2,13 +2,22 @@ import { arrayUnion, collection, doc, getDocs, query, setDoc, updateDoc, where }
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, firebaseEnabled, storage } from './firebase';
 
+export type DeliveryLocation = {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  capturedAt: string;
+};
+
 export type CustomerDetails = {
   firstName: string;
   lastName: string;
   email: string;
   address: string;
   city: string;
+  postalCode?: string;
   deliveryWindow: string;
+  location?: DeliveryLocation;
 };
 
 export type OrderItem = {
