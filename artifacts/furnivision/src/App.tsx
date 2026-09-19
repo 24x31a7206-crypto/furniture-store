@@ -638,7 +638,7 @@ function Home({ onAdd, liked, onLike, compared, onCompare }: { onAdd: (product: 
   const featured = products.slice(0, 4);
   const categoryTiles = [
     { label: 'Living room', slug: 'living-room', image: '/assets/hero-room.jpg', note: 'Soft landings' },
-    { label: 'Bedroom', slug: 'bedroom', image: '/assets/nest-bed.jpg', note: 'Quiet mornings' },
+    { label: 'Bedroom', slug: 'beds', image: '/assets/nest-bed.jpg', note: 'Quiet mornings' },
     { label: 'Dining', slug: 'dining-tables', image: '/assets/mesa-dining-table.jpg', note: 'Gather well' },
     { label: 'Lighting', slug: 'lighting', image: '/assets/frame-65.jpg', note: 'Warm the room' },
   ];
