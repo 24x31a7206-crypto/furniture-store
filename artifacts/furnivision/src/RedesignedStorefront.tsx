@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronLeft, Heart, Menu, Minus, Package, Plus, Search, ShoppingBag, Sparkles, Star, Truck, UserRound, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronLeft, Heart, MapPin, Menu, Minus, Package, Plus, Search, ShoppingBag, Sparkles, Star, Truck, UserRound, X } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { createAccount, signIn, signInWithGoogle, signOutUser } from './lib/auth';
 import { cancelCustomerOrder, updateCustomerOrder, type CustomerDetails, type StoreOrder } from './lib/orders';
 import type { Product } from './App';
+import type { SiteContent } from './lib/site-content';
+import './redesigned.css';
 
 type CustomerUser = { uid: string; email: string | null; displayName: string | null };
 
@@ -13,6 +15,8 @@ type StorefrontProps = {
   liked: string[];
   user: CustomerUser | null;
   orders: StoreOrder[];
+  content: SiteContent;
+  isAdmin: boolean;
   onAdd: (product: Product) => void;
   onRemove: (id: string) => void;
   onIncrement: (id: string) => void;
@@ -147,14 +151,36 @@ function CheckoutPage({ cartItems, user, onRemove, onIncrement, onDecrement, onC
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState<CustomerDetails['location']>();
   const total = cartItems.reduce((sum, item) => sum + item.price, 0);
+  const groupedItems = useMemo(() => cartItems.reduce<Array<{ item: Product; quantity: number }>>((list, item) => {
+    const existing = list.find((line) => line.item.id === item.id);
+    if (existing) existing.quantity += 1;
+    else list.push({ item, quantity: 1 });
+    return list;
+  }, []), [cartItems]);
+  const captureLocation = () => {
+    if (!navigator.geolocation) {
+      setMessage('Location capture is not supported by this browser.');
+      return;
+    }
+    setMessage('Requesting your delivery pin…');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setDeliveryLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, capturedAt: new Date().toISOString() });
+        setMessage('Delivery pin captured. You can place the order now.');
+      },
+      () => setMessage('We could not capture your location. You can still place the order with your address.'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
     setMessage('');
     const data = new FormData(event.currentTarget);
     try {
-      await onOrder({ firstName: String(data.get('firstName')), lastName: String(data.get('lastName')), email: String(data.get('email')), address: String(data.get('address')), city: String(data.get('city')), deliveryWindow: String(data.get('deliveryWindow')) });
+      await onOrder({ firstName: String(data.get('firstName')), lastName: String(data.get('lastName')), email: String(data.get('email')), address: String(data.get('address')), city: String(data.get('city')), postalCode: String(data.get('postalCode')), deliveryWindow: String(data.get('deliveryWindow')), location: deliveryLocation });
       onClear();
       setDone(true);
     } catch (error) {
@@ -164,7 +190,7 @@ function CheckoutPage({ cartItems, user, onRemove, onIncrement, onDecrement, onC
     }
   };
   if (done) return <main className="new-page new-success"><Check size={34} /><p className="new-kicker">Order received</p><h1>A room<br /><em>is coming.</em></h1><p>We’ll send a confirmation and delivery window to your inbox. Thank you for choosing pieces with a point of view.</p><ButtonLink href="/">Return home</ButtonLink></main>;
-  return <main className="new-page new-page--checkout"><div className="new-checkout-head"><PageBackButton fallback="/furniture" label="Continue shopping" /><p className="new-kicker">FurniVision / Checkout</p><h1>Make it <em>yours.</em></h1></div>{cartItems.length === 0 ? <div className="new-empty new-empty--page"><ShoppingBag size={30} /><h2>Your bag is waiting.</h2><ButtonLink href="/furniture">Browse the collection</ButtonLink></div> : <div className="new-checkout-layout"><form onSubmit={submit} className="new-checkout-form"><h2>Delivery details</h2><p className="new-form-note">Your order is reviewed by our studio before a delivery window is confirmed.</p><div className="new-form-grid"><label>First name<input required name="firstName" autoComplete="given-name" /></label><label>Last name<input required name="lastName" autoComplete="family-name" /></label><label className="wide">Email<input required type="email" name="email" defaultValue={user?.email || ''} autoComplete="email" /></label><label className="wide">Street address<input required name="address" autoComplete="street-address" /></label><label>City<input required name="city" autoComplete="address-level2" /></label><label>Preferred delivery<select required name="deliveryWindow" defaultValue=""><option value="" disabled>Choose a window</option><option>Weekday morning</option><option>Weekday afternoon</option><option>Saturday</option></select></label></div>{!user && <p className="new-form-alert">Please <Link href="/account">sign in</Link> before placing an order so your delivery details stay attached to your account.</p>}{message && <p className="new-form-alert" role="alert">{message}</p>}<button disabled={!user || busy} className="new-button new-button--full">{busy ? 'Preparing your order…' : user ? 'Place order' : 'Sign in to place order'}<ArrowUpRight size={15} /></button></form><aside className="new-order-summary"><p className="new-kicker">Order summary / {cartItems.length}</p>{cartItems.map((item, index) => <div className="new-summary-line" key={`${item.id}-${index}`}><img src={item.image} alt="" /><div><strong>{item.name}</strong><span>{item.material}</span><div className="new-quantity"><button type="button" onClick={() => onDecrement(item.id)}><Minus size={12} /></button><span>1</span><button type="button" onClick={() => onIncrement(item.id)}><Plus size={12} /></button></div></div><div><strong>{money(item.price)}</strong><button type="button" onClick={() => onRemove(item.id)}>Remove</button></div></div>)}<div className="new-summary-total"><span>Total</span><strong>{money(total)}</strong></div><p className="new-summary-note">White-glove delivery is included.</p></aside></div>}</main>;
+  return <main className="new-page new-page--checkout"><div className="new-checkout-head"><PageBackButton fallback="/furniture" label="Continue shopping" /><p className="new-kicker">FurniVision / Checkout</p><h1>Make it <em>yours.</em></h1></div>{cartItems.length === 0 ? <div className="new-empty new-empty--page"><ShoppingBag size={30} /><h2>Your bag is waiting.</h2><ButtonLink href="/furniture">Browse the collection</ButtonLink></div> : <div className="new-checkout-layout"><form onSubmit={submit} className="new-checkout-form"><h2>Delivery details</h2><p className="new-form-note">Your order is reviewed by our studio before a delivery window is confirmed.</p><div className="new-form-grid"><label>First name<input required name="firstName" autoComplete="given-name" /></label><label>Last name<input required name="lastName" autoComplete="family-name" /></label><label className="wide">Email<input required type="email" name="email" defaultValue={user?.email || ''} autoComplete="email" /></label><label className="wide">Street address<input required name="address" autoComplete="street-address" /></label><label>City<input required name="city" autoComplete="address-level2" /></label><label>Postal code<input required name="postalCode" autoComplete="postal-code" /></label><label>Preferred delivery<select required name="deliveryWindow" defaultValue=""><option value="" disabled>Choose a window</option><option>Weekday morning</option><option>Weekday afternoon</option><option>Saturday</option></select></label></div><button type="button" className="new-location-button" onClick={captureLocation}><MapPin size={15} /> {deliveryLocation ? 'Delivery pin captured' : 'Add delivery pin (optional)'}</button>{!user && <p className="new-form-alert">Please <Link href="/account">sign in</Link> before placing an order so your delivery details stay attached to your account.</p>}{message && <p className="new-form-alert" role="alert">{message}</p>}<button disabled={!user || busy} className="new-button new-button--full">{busy ? 'Preparing your order…' : user ? 'Place order' : 'Sign in to place order'}<ArrowUpRight size={15} /></button></form><aside className="new-order-summary"><p className="new-kicker">Order summary / {cartItems.length}</p>{groupedItems.map(({ item, quantity }) => <div className="new-summary-line" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><span>{item.material}</span><div className="new-quantity"><button type="button" onClick={() => onDecrement(item.id)}><Minus size={12} /></button><span>{quantity}</span><button type="button" onClick={() => onIncrement(item.id)}><Plus size={12} /></button></div></div><div><strong>{money(item.price * quantity)}</strong><button type="button" onClick={() => onRemove(item.id)}>Remove</button></div></div>)}<div className="new-summary-total"><span>Total</span><strong>{money(total)}</strong></div><p className="new-summary-note">White-glove delivery is included.</p></aside></div>}</main>;
 }
 
 function WishlistPage({ products, liked, onLike, onAdd }: Pick<StorefrontProps, 'products' | 'liked' | 'onLike' | 'onAdd'>) {
@@ -172,7 +198,7 @@ function WishlistPage({ products, liked, onLike, onAdd }: Pick<StorefrontProps, 
   return <main className="new-page new-page--catalog"><PageBackButton fallback="/" label="Back to home" /><section className="new-catalog-intro"><p className="new-kicker">FurniVision / Saved pieces</p><h1>Keep<br /><em>close.</em></h1><p>The pieces you paused on, saved for the room that is still becoming.</p></section>{savedProducts.length ? <div className="new-product-grid new-product-grid--catalog">{savedProducts.map((product) => <ProductCard key={product.id} product={product} liked onLike={() => onLike(product.id)} onAdd={() => onAdd(product)} />)}</div> : <div className="new-empty new-empty--page"><Heart size={30} /><h2>Nothing saved yet.</h2><p>Tap the heart on anything that feels like it belongs in your room.</p><ButtonLink href="/furniture">Shop all pieces</ButtonLink></div>}</main>;
 }
 
-function AccountPage({ user, orders, onOrderChange }: Pick<StorefrontProps, 'user' | 'orders' | 'onOrderChange'>) {
+function AccountPage({ user, orders, isAdmin, onOrderChange }: Pick<StorefrontProps, 'user' | 'orders' | 'isAdmin' | 'onOrderChange'>) {
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<'signin' | 'create'>('signin');
   const [email, setEmail] = useState('');
@@ -210,5 +236,5 @@ export function RedesignedStorefront(props: StorefrontProps) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location]);
-  return <div className="new-storefront"><StoreHeader count={props.cartItems.length} user={props.user} onCart={() => setBagOpen(true)} /><Switch><Route path="/"><HomePage {...props} /></Route><Route path="/furniture"><FurniturePage {...props} /></Route><Route path="/furniture/category/:categorySlug"><CollectionPage {...props} /></Route><Route path="/furniture/:productId"><ProductPage {...props} /></Route><Route path="/wishlist"><WishlistPage {...props} /></Route><Route path="/checkout"><CheckoutPage {...props} /></Route><Route path="/account"><AccountPage {...props} /></Route><Route path="/inspiration"><InspirationPage /></Route><Route component={NotFound} /></Switch><StoreFooter /><BagDrawer items={props.cartItems} open={bagOpen} onClose={() => setBagOpen(false)} onRemove={props.onRemove} onIncrement={props.onIncrement} onDecrement={props.onDecrement} /></div>;
+  return <div className="new-storefront"><StoreHeader count={props.cartItems.length} user={props.user} onCart={() => setBagOpen(true)} /><div className="new-announcement">{props.content.announcement}</div><Switch><Route path="/"><HomePage {...props} /></Route><Route path="/furniture"><FurniturePage {...props} /></Route><Route path="/furniture/category/:categorySlug"><CollectionPage {...props} /></Route><Route path="/furniture/:productId"><ProductPage {...props} /></Route><Route path="/wishlist"><WishlistPage {...props} /></Route><Route path="/checkout"><CheckoutPage {...props} /></Route><Route path="/account"><AccountPage {...props} /></Route><Route path="/inspiration"><InspirationPage /></Route><Route component={NotFound} /></Switch><StoreFooter /><BagDrawer items={props.cartItems} open={bagOpen} onClose={() => setBagOpen(false)} onRemove={props.onRemove} onIncrement={props.onIncrement} onDecrement={props.onDecrement} /></div>;
 }
