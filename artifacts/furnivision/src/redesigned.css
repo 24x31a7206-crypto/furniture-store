@@ -22,6 +22,8 @@
 }
 .new-header__inner { display: flex; align-items: center; justify-content: space-between; gap: 28px; max-width: 1480px; min-height: 76px; margin: auto; padding: 0 32px; }
 .new-announcement { padding: 9px 20px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); font: 9px var(--app-font-mono); letter-spacing: .16em; text-align: center; text-transform: uppercase; }
+.new-owner-link { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font: 9px var(--app-font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.new-owner-link:hover { background: hsl(var(--accent)); }
 .new-logo { font-family: var(--app-font-sans); font-size: 18px; font-weight: 700; letter-spacing: -.06em; }
 .new-logo em { color: hsl(var(--accent)); font-style: normal; }
 .new-nav { display: flex; align-items: center; gap: 26px; margin-left: auto; font-size: 13px; }
