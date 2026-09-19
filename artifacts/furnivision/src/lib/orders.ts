@@ -1,4 +1,4 @@
-import { arrayUnion, collection, doc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, collection, doc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, firebaseEnabled, storage } from './firebase';
 
@@ -74,6 +74,15 @@ export async function saveCustomerOrder(order: StoreOrder) {
 export async function loadAllOrders(): Promise<StoreOrder[]> {
   if (!db || !firebaseEnabled) return [];
   const snapshot = await getDocs(collection(db, 'orders'));
+  return snapshot.docs.map((item) => {
+    const data = item.data() as Omit<StoreOrder, 'id'>;
+    return { id: item.id, ...data, status: normalizeStatus(data.status) } as StoreOrder;
+  }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function loadCustomerOrders(customerId: string): Promise<StoreOrder[]> {
+  if (!db || !firebaseEnabled) return [];
+  const snapshot = await getDocs(query(collection(db, 'orders'), where('customerId', '==', customerId)));
   return snapshot.docs.map((item) => {
     const data = item.data() as Omit<StoreOrder, 'id'>;
     return { id: item.id, ...data, status: normalizeStatus(data.status) } as StoreOrder;
