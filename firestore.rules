@@ -8,12 +8,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/adminConfig/primary).data.uid == request.auth.uid;
     }
 
-    function isActiveWorker() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/workers/$(request.auth.uid))
-        && get(/databases/$(database)/documents/workers/$(request.auth.uid)).data.active == true;
-    }
-
     match /adminConfig/primary {
       allow read: if request.auth != null
         && (!exists(/databases/$(database)/documents/adminConfig/primary)
@@ -25,29 +19,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    match /workers/{workerId} {
-      allow read: if isStorefrontOwner()
-        || (request.auth != null && request.auth.uid == workerId);
-      allow create, update, delete: if isStorefrontOwner();
-    }
-
     match /orders/{orderId} {
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly([
-          'id', 'customerId', 'customer', 'items', 'total', 'createdAt', 'status'
+          'id', 'customerId', 'customer', 'items', 'total', 'createdAt', 'updatedAt', 'status', 'activity'
         ])
         && request.resource.data.customerId == request.auth.uid
         && request.resource.data.status == 'New';
       allow read: if isStorefrontOwner()
-        || (request.auth != null && resource.data.customerId == request.auth.uid)
-        || (isActiveWorker() && resource.data.assignedWorkerId == request.auth.uid);
-      allow update: if isStorefrontOwner()
-        || (isActiveWorker()
-          && resource.data.assignedWorkerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'activity', 'proofOfDelivery'])
-          && request.resource.data.status in [
-            'Assigned', 'Picked up', 'Out for delivery', 'Delivered', 'Issue'
-          ]);
+        || (request.auth != null && resource.data.customerId == request.auth.uid);
+      allow update: if isStorefrontOwner();
       allow delete: if isStorefrontOwner();
     }
 
@@ -71,6 +52,10 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null
         && resource.data.userId == request.auth.uid;
+    }
+
+    match /workers/{workerId} {
+      allow read, write: if false;
     }
   }
 }
