@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Heart, Search, ShoppingBag, Menu, X, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole } from 'lucide-react';
+import { Heart, Search, ShoppingBag, Menu, X, MapPin, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import './index.css';
 import { createAccount, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
