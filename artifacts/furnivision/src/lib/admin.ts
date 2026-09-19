@@ -10,6 +10,7 @@ import { db, firebaseEnabled } from './firebase';
 
 export type CatalogProduct = {
   id: string;
+  slug?: string;
   name: string;
   collection: string;
   price: number;
@@ -20,6 +21,7 @@ export type CatalogProduct = {
   dimensions: string;
   stock: number;
   badge?: string;
+  status?: 'draft' | 'published';
 };
 
 const asText = (value: unknown, fallback = '') =>
@@ -32,6 +34,7 @@ function normalizeCatalogProduct(id: string, data: Record<string, unknown>): Cat
   const badge = asText(data.badge);
   return {
     id,
+    slug: asText(data.slug, id),
     name: asText(data.name, 'Untitled product'),
     collection: asText(data.collection, 'Uncategorized'),
     price: Math.max(0, asNumber(data.price, 0)),
@@ -41,6 +44,7 @@ function normalizeCatalogProduct(id: string, data: Record<string, unknown>): Cat
     description: asText(data.description),
     dimensions: asText(data.dimensions),
     stock: Math.max(0, Math.floor(asNumber(data.stock, 0))),
+    status: data.status === 'draft' ? 'draft' : 'published',
     ...(badge ? { badge } : {}),
   };
 }
@@ -59,9 +63,10 @@ export async function saveCatalogProduct(product: Omit<CatalogProduct, 'id'> & {
   const collectionName = product.collection.trim();
   const material = product.material.trim();
   const image = product.image.trim();
+  const slug = (product.slug || name).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const description = product.description.trim();
   const dimensions = product.dimensions.trim();
-  if (!name || !collectionName || !material || !image || !description || !dimensions) {
+  if (!name || !slug || !collectionName || !material || !image || !description || !dimensions) {
     throw new Error('Complete the required product fields before saving.');
   }
   if (!Number.isFinite(product.price) || product.price < 0) {
@@ -73,6 +78,7 @@ export async function saveCatalogProduct(product: Omit<CatalogProduct, 'id'> & {
   const { id, ...data } = {
     ...product,
     name,
+    slug,
     collection: collectionName,
     material,
     image,
@@ -81,6 +87,7 @@ export async function saveCatalogProduct(product: Omit<CatalogProduct, 'id'> & {
     price: Number(product.price),
     stock: Math.floor(Number(product.stock)),
     badge: product.badge?.trim() || '',
+    status: product.status === 'draft' ? 'draft' : 'published',
   };
   if (id) {
     await setDoc(doc(db, 'products', id), { ...data, id }, { merge: true });
