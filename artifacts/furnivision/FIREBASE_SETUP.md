@@ -35,18 +35,23 @@ The app initializes Firebase only when all six values are present.
 
 ## 3. Admin ownership and security model
 
-- Create or sign in to the intended owner account, then open `/admin`. The first account that successfully claims the Admin room is atomically recorded as the storefront owner.
-- Only that owner can publish products, homepage content, and site media.
-- The owner record lives at `adminConfig/primary` and cannot be replaced or deleted from the public app.
+- Sign in with the verified `furnivisionsupport@gmail.com` account, then open `/admin`.
+- The app only grants admin access to that verified email. Other customer accounts cannot claim or manage the storefront.
+- The verified owner is recorded at `adminConfig/primary`; the owner can claim or recover that record, and it cannot be deleted from the public app.
 - Regular signed-in users can read and write only their own `users/{uid}/...` data.
 - Review creation and edits are scoped to the signed-in review owner.
 - Room uploads are scoped to the owner, limited to images under 10 MB.
 
-The intended owner should be the first person to claim `/admin` after the rules
-are deployed. Customer sign-in and Google sign-in do not grant admin access by
-themselves. Deploy the rules with:
+Customer sign-in and Google sign-in do not grant admin access by themselves.
+If the rules have not been published to Firebase, the owner record may not be
+read or claimed. A Render website build does not publish Firestore rules. Deploy
+the rules separately with:
 
 `firebase deploy --only firestore:rules,storage`
+
+The admin panel manages products and stock, order status and delivery proof,
+homepage copy and imagery, store contact details, delivery windows, and
+delivery/returns policies.
 
 ## 4. Direct admin order and delivery workflow
 
@@ -64,4 +69,4 @@ Use the **Orders** panel to search orders, filter by status, and move each order
 
 Status changes are recorded in the order activity timeline. The admin can also upload an optional delivery proof photo and add completion notes from the same order card.
 
-The owner account is the first account registered in adminConfig/primary; it is the only account allowed to manage products, orders, homepage content, and delivery proof uploads.
+Only the verified store-owner account can manage products, orders, homepage content, and delivery proof uploads.

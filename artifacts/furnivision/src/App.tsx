@@ -329,7 +329,7 @@ function App() {
     />
   );
 
-  return <StoreContext.Provider value={{ wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal, user }}><Switch><Route path="/admin" component={() => <AdminDashboard user={user} onCatalogChange={reloadCatalog} />} /><Route component={() => storefront} /></Switch></StoreContext.Provider>;
+  return <StoreContext.Provider value={{ wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal, user }}><Switch><Route path="/admin" component={() => <AdminDashboard user={user} onCatalogChange={reloadCatalog} onSiteContentChange={setSiteContent} />} /><Route component={() => storefront} /></Switch></StoreContext.Provider>;
 }
 
 export default App;

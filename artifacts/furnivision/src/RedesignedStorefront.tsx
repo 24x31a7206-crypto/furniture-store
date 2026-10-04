@@ -4,7 +4,7 @@ import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { createAccount, signIn, signInWithGoogle, signOutUser } from './lib/auth';
 import { cancelCustomerOrder, updateCustomerOrder, type CustomerDetails, type StoreOrder } from './lib/orders';
 import type { Product } from './App';
-import type { SiteContent } from './lib/site-content';
+import { defaultSiteContent, type SiteContent } from './lib/site-content';
 import './redesigned.css';
 
 type CustomerUser = { uid: string; email: string | null; displayName: string | null };
@@ -111,14 +111,32 @@ function ProductCard({ product, liked, onLike, onAdd }: { product: Product; like
   return <article className="new-product-card"><Link href={`/furniture/${product.id}`} className="new-product-card__image"><img src={product.image} alt={product.name} /><span>{product.collection}</span><i>View piece <ArrowUpRight size={14} /></i></Link><div className="new-product-card__body"><div><Link href={`/furniture/${product.id}`}><h3>{product.name}</h3></Link><p>{product.material}</p><div className="new-rating"><Star size={12} fill="currentColor" /> 4.8 <span>· considered quality</span></div></div><div className="new-product-card__aside"><strong>{money(product.price)}</strong><div><button onClick={onLike} className={liked ? 'is-liked' : ''} aria-label={`${liked ? 'Remove' : 'Save'} ${product.name}`}><Heart size={16} fill={liked ? 'currentColor' : 'none'} /></button><button onClick={onAdd} aria-label={`Add ${product.name} to bag`}><Plus size={17} /></button></div></div></div></article>;
 }
 
-function HomePage({ products, liked, onLike, onAdd }: Pick<StorefrontProps, 'products' | 'liked' | 'onLike' | 'onAdd'>) {
+function HomePage({ products, liked, onLike, onAdd, content }: Pick<StorefrontProps, 'products' | 'liked' | 'onLike' | 'onAdd' | 'content'>) {
   const featured = products.slice(0, 4);
+  const heroLines = content.heroTitle.split(/\r?\n/);
+  const ribbonItems = content.marquee.split('/').map((item) => item.trim()).filter(Boolean);
   const rooms = [
     { label: 'Living room', slug: 'living-room', image: '/assets/hero-room.jpg', note: 'Settle in' },
     { label: 'Bedroom', slug: 'beds', image: '/assets/nest-bed.jpg', note: 'Sleep well' },
     { label: 'Dining', slug: 'dining-tables', image: '/assets/mesa-dining-table.jpg', note: 'Gather close' },
   ];
-  return <main className="new-page"><section className="new-hero"><div className="new-hero__copy"><p className="new-kicker">Furniture for the everyday extraordinary</p><h1>Make space<br /><em>for living.</em></h1><p className="new-hero__intro">A considered collection of furniture with honest materials, comfortable proportions, and room for your life to happen around it.</p><div className="new-hero__actions"><ButtonLink href="/furniture">Shop the collection</ButtonLink><Link href="#edit" className="new-text-link">Explore the edit <ArrowRight size={15} /></Link></div><div className="new-hero__proof"><div><strong>01</strong><span>Thoughtful pieces</span></div><div><strong>02</strong><span>Made to live with</span></div><div><strong>03</strong><span>White-glove delivery</span></div></div></div><div className="new-hero__visual"><img src="/assets/hero-room.jpg" alt="Warm living room with sculptural furniture" /><div className="new-hero__caption"><span>FurniVision / 01—04</span><strong>Rooms that feel like you.</strong></div><div className="new-hero__badge">The<br /><em>new</em><br />ordinary</div></div></section><div className="new-ribbon"><span>Material first</span><i>✳</i><span>Comfort always</span><i>✳</i><span>Made to be lived with</span><i>✳</i><span>Material first</span></div><section className="new-section new-section--rooms"><div className="new-section-head"><div><p className="new-kicker">Start with a feeling</p><h2>Find your <em>room.</em></h2></div><Link href="/furniture" className="new-text-link">View all pieces <ArrowUpRight size={15} /></Link></div><div className="new-room-grid">{rooms.map((room) => <Link className="new-room-card" href={`/furniture/category/${room.slug}`} key={room.slug}><img src={room.image} alt={room.label} /><div><span>{room.note}</span><strong>{room.label}</strong><ArrowUpRight size={18} /></div></Link>)}</div></section><section id="edit" className="new-section new-section--edit"><div className="new-section-head"><div><p className="new-kicker">The considered edit</p><h2>New arrivals,<br /><em>well chosen.</em></h2></div><p className="new-section-note">Pieces with presence, proportion, and a little room for your own point of view.</p></div><div className="new-product-grid">{featured.map((product) => <ProductCard key={product.id} product={product} liked={liked.includes(product.id)} onLike={() => onLike(product.id)} onAdd={() => onAdd(product)} />)}</div></section><section className="new-manifesto"><div className="new-manifesto__image"><img src="/assets/atelier-kitchen.jpg" alt="Tactile kitchen storage and materials" /></div><div className="new-manifesto__copy"><p className="new-kicker">Design, made livable</p><h2>Good rooms leave<br /><em>space for you.</em></h2><p>We choose honest materials, comfortable proportions, and details that get better with time. Nothing extra. Everything intentional.</p><ButtonLink href="/inspiration" secondary>Read the journal</ButtonLink></div></section><section className="new-trust"><div><Truck size={20} /><strong>White-glove delivery</strong><span>From our studio to your door.</span></div><div><Sparkles size={20} /><strong>Made to last</strong><span>Chosen for everyday life.</span></div><div><Heart size={20} /><strong>Easy to love</strong><span>Presence, never noise.</span></div></section></main>;
+  return <main className="new-page">
+    <section className="new-hero">
+      <div className="new-hero__copy">
+        <p className="new-kicker">{content.heroEyebrow}</p>
+        <h1>{heroLines.map((line, index) => <span key={`${line}-${index}`}>{index === heroLines.length - 1 ? <em>{line}</em> : line}{index < heroLines.length - 1 && <br />}</span>)}</h1>
+        <p className="new-hero__intro">{content.heroBody}</p>
+        <div className="new-hero__actions"><ButtonLink href="/furniture">Shop the collection</ButtonLink><Link href="#edit" className="new-text-link">Explore the edit <ArrowRight size={15} /></Link></div>
+        <div className="new-hero__proof"><div><strong>01</strong><span>Thoughtful pieces</span></div><div><strong>02</strong><span>Made to live with</span></div><div><strong>03</strong><span>White-glove delivery</span></div></div>
+      </div>
+      <div className="new-hero__visual"><img src={content.heroPoster || '/assets/hero-room.jpg'} alt="Warm living room with sculptural furniture" /><div className="new-hero__caption"><span>FurniVision / 01—04</span><strong>Rooms that feel like you.</strong></div><div className="new-hero__badge">The<br /><em>new</em><br />ordinary</div></div>
+    </section>
+    <div className="new-ribbon">{(ribbonItems.length ? ribbonItems : defaultSiteContent.marquee.split('/')).map((item, index) => <span key={`${item}-${index}`}>{index > 0 && <i>✳</i>}{item}</span>)}</div>
+    <section className="new-section new-section--rooms"><div className="new-section-head"><div><p className="new-kicker">Start with a feeling</p><h2>Find your <em>room.</em></h2></div><Link href="/furniture" className="new-text-link">View all pieces <ArrowUpRight size={15} /></Link></div><div className="new-room-grid">{rooms.map((room) => <Link className="new-room-card" href={`/furniture/category/${room.slug}`} key={room.slug}><img src={room.image} alt={room.label} /><div><span>{room.note}</span><strong>{room.label}</strong><ArrowUpRight size={18} /></div></Link>)}</div></section>
+    <section id="edit" className="new-section new-section--edit"><div className="new-section-head"><div><p className="new-kicker">The considered edit</p><h2>New arrivals,<br /><em>well chosen.</em></h2></div><p className="new-section-note">Pieces with presence, proportion, and a little room for your own point of view.</p></div><div className="new-product-grid">{featured.map((product) => <ProductCard key={product.id} product={product} liked={liked.includes(product.id)} onLike={() => onLike(product.id)} onAdd={() => onAdd(product)} />)}</div></section>
+    <section className="new-manifesto"><div className="new-manifesto__image"><img src="/assets/atelier-kitchen.jpg" alt="Tactile kitchen storage and materials" /></div><div className="new-manifesto__copy"><p className="new-kicker">Design, made livable</p><h2>Good rooms leave<br /><em>space for you.</em></h2><p>We choose honest materials, comfortable proportions, and details that get better with time. Nothing extra. Everything intentional.</p><ButtonLink href="/inspiration" secondary>Read the journal</ButtonLink></div></section>
+    <section className="new-trust"><div><Truck size={20} /><strong>White-glove delivery</strong><span>{content.deliveryPolicy}</span></div><div><Sparkles size={20} /><strong>Made to last</strong><span>Chosen for everyday life.</span></div><div><Heart size={20} /><strong>Easy to love</strong><span>{content.footerNote}</span></div></section>
+  </main>;
 }
 
 function FurniturePage({ products, liked, onLike, onAdd }: Pick<StorefrontProps, 'products' | 'liked' | 'onLike' | 'onAdd'>) {
@@ -147,12 +165,13 @@ function ProductPage({ products, liked, onLike, onAdd }: Pick<StorefrontProps, '
   return <main className="new-page new-page--product"><PageBackButton fallback="/furniture" label="Back to collection" /><div className="new-product-detail"><div className="new-product-detail__image"><img src={product.image} alt={product.name} /><span className="new-image-label">FurniVision / object study</span></div><div className="new-product-detail__copy"><p className="new-kicker">{product.collection} / {product.material}</p><h1>{product.name}</h1><div className="new-product-price"><strong>{money(product.price)}</strong><span><Truck size={15} /> Ships in 2–4 weeks</span></div><p className="new-product-description">{product.description}</p><div className="new-detail-facts"><div><span>Dimensions</span><strong>{product.dimensions}</strong></div><div><span>Material</span><strong>{product.material}</strong></div><div><span>Promise</span><strong>White-glove delivery</strong></div></div><div className="new-purchase"><div className="new-quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus size={14} /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)} aria-label="Increase quantity"><Plus size={14} /></button></div><button className="new-button" onClick={() => { for (let index = 0; index < quantity; index += 1) onAdd(product); }}>Add to bag <ArrowUpRight size={15} /></button><button className={`new-save-button ${liked.includes(product.id) ? 'is-liked' : ''}`} onClick={() => onLike(product.id)} aria-label="Save product"><Heart size={18} fill={liked.includes(product.id) ? 'currentColor' : 'none'} /></button></div><div className="new-product-note"><Star size={15} fill="currentColor" /><span>4.8 / 5 from customers who care about comfort, finish, and how a piece settles into a room.</span></div></div></div></main>;
 }
 
-function CheckoutPage({ cartItems, user, onRemove, onIncrement, onDecrement, onClear, onOrder }: Pick<StorefrontProps, 'cartItems' | 'user' | 'onRemove' | 'onIncrement' | 'onDecrement' | 'onClear' | 'onOrder'>) {
+function CheckoutPage({ cartItems, user, onRemove, onIncrement, onDecrement, onClear, onOrder, content }: Pick<StorefrontProps, 'cartItems' | 'user' | 'onRemove' | 'onIncrement' | 'onDecrement' | 'onClear' | 'onOrder' | 'content'>) {
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState<CustomerDetails['location']>();
   const total = cartItems.reduce((sum, item) => sum + item.price, 0);
+  const deliveryWindows = content.deliveryWindows.length ? content.deliveryWindows : defaultSiteContent.deliveryWindows;
   const groupedItems = useMemo(() => cartItems.reduce<Array<{ item: Product; quantity: number }>>((list, item) => {
     const existing = list.find((line) => line.item.id === item.id);
     if (existing) existing.quantity += 1;
@@ -190,7 +209,34 @@ function CheckoutPage({ cartItems, user, onRemove, onIncrement, onDecrement, onC
     }
   };
   if (done) return <main className="new-page new-success"><Check size={34} /><p className="new-kicker">Order received</p><h1>A room<br /><em>is coming.</em></h1><p>We’ll send a confirmation and delivery window to your inbox. Thank you for choosing pieces with a point of view.</p><ButtonLink href="/">Return home</ButtonLink></main>;
-  return <main className="new-page new-page--checkout"><div className="new-checkout-head"><PageBackButton fallback="/furniture" label="Continue shopping" /><p className="new-kicker">FurniVision / Checkout</p><h1>Make it <em>yours.</em></h1></div>{cartItems.length === 0 ? <div className="new-empty new-empty--page"><ShoppingBag size={30} /><h2>Your bag is waiting.</h2><ButtonLink href="/furniture">Browse the collection</ButtonLink></div> : <div className="new-checkout-layout"><form onSubmit={submit} className="new-checkout-form"><h2>Delivery details</h2><p className="new-form-note">Your order is reviewed by our studio before a delivery window is confirmed.</p><div className="new-form-grid"><label>First name<input required name="firstName" autoComplete="given-name" /></label><label>Last name<input required name="lastName" autoComplete="family-name" /></label><label className="wide">Email<input required type="email" name="email" defaultValue={user?.email || ''} autoComplete="email" /></label><label className="wide">Street address<input required name="address" autoComplete="street-address" /></label><label>City<input required name="city" autoComplete="address-level2" /></label><label>Postal code<input required name="postalCode" autoComplete="postal-code" /></label><label>Preferred delivery<select required name="deliveryWindow" defaultValue=""><option value="" disabled>Choose a window</option><option>Weekday morning</option><option>Weekday afternoon</option><option>Saturday</option></select></label></div><button type="button" className="new-location-button" onClick={captureLocation}><MapPin size={15} /> {deliveryLocation ? 'Delivery pin captured' : 'Add delivery pin (optional)'}</button>{!user && <p className="new-form-alert">Please <Link href="/account">sign in</Link> before placing an order so your delivery details stay attached to your account.</p>}{message && <p className="new-form-alert" role="alert">{message}</p>}<button disabled={!user || busy} className="new-button new-button--full">{busy ? 'Preparing your order…' : user ? 'Place order' : 'Sign in to place order'}<ArrowUpRight size={15} /></button></form><aside className="new-order-summary"><p className="new-kicker">Order summary / {cartItems.length}</p>{groupedItems.map(({ item, quantity }) => <div className="new-summary-line" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><span>{item.material}</span><div className="new-quantity"><button type="button" onClick={() => onDecrement(item.id)}><Minus size={12} /></button><span>{quantity}</span><button type="button" onClick={() => onIncrement(item.id)}><Plus size={12} /></button></div></div><div><strong>{money(item.price * quantity)}</strong><button type="button" onClick={() => onRemove(item.id)}>Remove</button></div></div>)}<div className="new-summary-total"><span>Total</span><strong>{money(total)}</strong></div><p className="new-summary-note">White-glove delivery is included.</p></aside></div>}</main>;
+  return <main className="new-page new-page--checkout">
+    <div className="new-checkout-head"><PageBackButton fallback="/furniture" label="Continue shopping" /><p className="new-kicker">FurniVision / Checkout</p><h1>Make it <em>yours.</em></h1></div>
+    {cartItems.length === 0 ? <div className="new-empty new-empty--page"><ShoppingBag size={30} /><h2>Your bag is waiting.</h2><ButtonLink href="/furniture">Browse the collection</ButtonLink></div> : (
+      <div className="new-checkout-layout">
+        <form onSubmit={submit} className="new-checkout-form">
+          <h2>Delivery details</h2><p className="new-form-note">{content.deliveryPolicy}</p>
+          <div className="new-form-grid">
+            <label>First name<input required name="firstName" autoComplete="given-name" /></label>
+            <label>Last name<input required name="lastName" autoComplete="family-name" /></label>
+            <label className="wide">Email<input required type="email" name="email" defaultValue={user?.email || ''} autoComplete="email" /></label>
+            <label className="wide">Street address<input required name="address" autoComplete="street-address" /></label>
+            <label>City<input required name="city" autoComplete="address-level2" /></label>
+            <label>Postal code<input required name="postalCode" autoComplete="postal-code" /></label>
+            <label>Preferred delivery<select required name="deliveryWindow" defaultValue=""><option value="" disabled>Choose a window</option>{deliveryWindows.map((window) => <option key={window}>{window}</option>)}</select></label>
+          </div>
+          <button type="button" className="new-location-button" onClick={captureLocation}><MapPin size={15} /> {deliveryLocation ? 'Delivery pin captured' : 'Add delivery pin (optional)'}</button>
+          {!user && <p className="new-form-alert">Please <Link href="/account">sign in</Link> before placing an order so your delivery details stay attached to your account.</p>}
+          {message && <p className="new-form-alert" role="alert">{message}</p>}
+          <button disabled={!user || busy} className="new-button new-button--full">{busy ? 'Preparing your order…' : user ? 'Place order' : 'Sign in to place order'}<ArrowUpRight size={15} /></button>
+        </form>
+        <aside className="new-order-summary">
+          <p className="new-kicker">Order summary / {cartItems.length}</p>
+          {groupedItems.map(({ item, quantity }) => <div className="new-summary-line" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><span>{item.material}</span><div className="new-quantity"><button type="button" onClick={() => onDecrement(item.id)}><Minus size={12} /></button><span>{quantity}</span><button type="button" onClick={() => onIncrement(item.id)}><Plus size={12} /></button></div></div><div><strong>{money(item.price * quantity)}</strong><button type="button" onClick={() => onRemove(item.id)}>Remove</button></div></div>)}
+          <div className="new-summary-total"><span>Total</span><strong>{money(total)}</strong></div><p className="new-summary-note">{content.deliveryPolicy}</p>
+        </aside>
+      </div>
+    )}
+  </main>;
 }
 
 function WishlistPage({ products, liked, onLike, onAdd }: Pick<StorefrontProps, 'products' | 'liked' | 'onLike' | 'onAdd'>) {
@@ -226,8 +272,37 @@ function NotFound() {
   return <main className="new-page new-empty new-empty--page"><p className="new-kicker">404 / Wrong room</p><h1>Nothing<br /><em>here.</em></h1><ButtonLink href="/">Return home</ButtonLink></main>;
 }
 
-function StoreFooter() {
-  return <footer className="new-footer"><div className="new-footer__top"><div><Link href="/" className="new-logo"><span>furni</span><em>vision</em></Link><p>Objects with a point of view.<br />Made for the lived-in life.</p></div><div><p className="new-kicker">Explore</p><Link href="/furniture">Furniture</Link><Link href="/wishlist">Wishlist</Link><Link href="/inspiration">Journal</Link><Link href="/account">Your account</Link></div><div><p className="new-kicker">Visit</p><p>18 Walker Street<br />New York, NY 10013<br /><em>By appointment</em></p></div><div><p className="new-kicker">Keep close</p><p>Seasonal notes, new pieces,<br />and rooms worth returning to.</p><form onSubmit={(event) => event.preventDefault()}><input type="email" placeholder="Your email" aria-label="Email address" required /><button aria-label="Subscribe"><ArrowUpRight size={16} /></button></form></div></div><div className="new-footer__bottom"><span>© 2026 FurniVision Studio</span><span>New York / Everywhere</span></div></footer>;
+function StorePoliciesPage({ content }: { content: SiteContent }) {
+  return <main className="new-page new-policies">
+    <PageBackButton fallback="/" label="Back to home" />
+    <section className="new-section">
+      <p className="new-kicker">FurniVision / Store information</p>
+      <h1>Delivery &amp; <em>returns.</em></h1>
+      <div className="new-policy-grid">
+        <section><h2>Delivery</h2><p>{content.deliveryPolicy}</p></section>
+        <section><h2>Returns</h2><p>{content.returnsPolicy}</p></section>
+        <section>
+          <h2>Contact</h2>
+          <p style={{ whiteSpace: 'pre-line' }}>{content.storeAddress}</p>
+          <p>{content.visitHours}</p>
+          {content.contactEmail && <a href={`mailto:${content.contactEmail}`}>{content.contactEmail}</a>}
+          {content.contactPhone && <a href={`tel:${content.contactPhone}`}>{content.contactPhone}</a>}
+        </section>
+      </div>
+    </section>
+  </main>;
+}
+
+function StoreFooter({ content }: { content: SiteContent }) {
+  return <footer className="new-footer">
+    <div className="new-footer__top">
+      <div><Link href="/" className="new-logo"><span>furni</span><em>vision</em></Link><p>Objects with a point of view.<br />Made for the lived-in life.</p></div>
+      <div><p className="new-kicker">Explore</p><Link href="/furniture">Furniture</Link><Link href="/wishlist">Wishlist</Link><Link href="/inspiration">Journal</Link><Link href="/account">Your account</Link><Link href="/policies">Delivery &amp; returns</Link></div>
+      <div><p className="new-kicker">Visit</p><p style={{ whiteSpace: 'pre-line' }}>{content.storeAddress}</p><p><em>{content.visitHours}</em></p>{content.contactEmail && <a href={`mailto:${content.contactEmail}`}>{content.contactEmail}</a>}{content.contactPhone && <a href={`tel:${content.contactPhone}`}>{content.contactPhone}</a>}</div>
+      <div><p className="new-kicker">Keep close</p><p>Seasonal notes, new pieces,<br />and rooms worth returning to.</p><form onSubmit={(event) => event.preventDefault()}><input type="email" placeholder="Your email" aria-label="Email address" required /><button aria-label="Subscribe"><ArrowUpRight size={16} /></button></form></div>
+    </div>
+    <div className="new-footer__bottom"><span>© {new Date().getFullYear()} FurniVision Studio</span><span>Store details and policies are maintained by the owner.</span></div>
+  </footer>;
 }
 
 export function RedesignedStorefront(props: StorefrontProps) {
@@ -239,5 +314,26 @@ export function RedesignedStorefront(props: StorefrontProps) {
   useEffect(() => {
     if (location === '/cart') setBagOpen(true);
   }, [location]);
-  return <div className="new-storefront"><StoreHeader count={props.cartItems.length} user={props.user} onCart={() => setBagOpen(true)} />{props.isAdmin && <Link href="/admin" className="new-owner-link">Owner control room <ArrowUpRight size={13} /></Link>}<div className="new-announcement">{props.content.announcement}</div><Switch><Route path="/"><HomePage {...props} /></Route><Route path="/furniture"><FurniturePage {...props} /></Route><Route path="/shop"><FurniturePage {...props} /></Route><Route path="/furniture/category/:categorySlug"><CollectionPage {...props} /></Route><Route path="/furniture/:productId"><ProductPage {...props} /></Route><Route path="/product/:slug"><ProductPage {...props} /></Route><Route path="/wishlist"><WishlistPage {...props} /></Route><Route path="/checkout"><CheckoutPage {...props} /></Route><Route path="/cart"><main className="new-page new-empty new-empty--page"><ShoppingBag size={30} /><h2>Your bag is open.</h2><p>Review your pieces in the drawer.</p></main></Route><Route path="/account"><AccountPage {...props} /></Route><Route path="/inspiration"><InspirationPage /></Route><Route component={NotFound} /></Switch><StoreFooter /><BagDrawer items={props.cartItems} open={bagOpen} onClose={() => setBagOpen(false)} onRemove={props.onRemove} onIncrement={props.onIncrement} onDecrement={props.onDecrement} /></div>;
+  return <div className="new-storefront">
+    <StoreHeader count={props.cartItems.length} user={props.user} onCart={() => setBagOpen(true)} />
+    {props.isAdmin && <Link href="/admin" className="new-owner-link">Owner control room <ArrowUpRight size={13} /></Link>}
+    <div className="new-announcement">{props.content.announcement}</div>
+    <Switch>
+      <Route path="/"><HomePage {...props} /></Route>
+      <Route path="/furniture"><FurniturePage {...props} /></Route>
+      <Route path="/shop"><FurniturePage {...props} /></Route>
+      <Route path="/furniture/category/:categorySlug"><CollectionPage {...props} /></Route>
+      <Route path="/furniture/:productId"><ProductPage {...props} /></Route>
+      <Route path="/product/:slug"><ProductPage {...props} /></Route>
+      <Route path="/wishlist"><WishlistPage {...props} /></Route>
+      <Route path="/checkout"><CheckoutPage {...props} /></Route>
+      <Route path="/cart"><main className="new-page new-empty new-empty--page"><ShoppingBag size={30} /><h2>Your bag is open.</h2><p>Review your pieces in the drawer.</p></main></Route>
+      <Route path="/account"><AccountPage {...props} /></Route>
+      <Route path="/policies"><StorePoliciesPage content={props.content} /></Route>
+      <Route path="/inspiration"><InspirationPage /></Route>
+      <Route component={NotFound} />
+    </Switch>
+    <StoreFooter content={props.content} />
+    <BagDrawer items={props.cartItems} open={bagOpen} onClose={() => setBagOpen(false)} onRemove={props.onRemove} onIncrement={props.onIncrement} onDecrement={props.onDecrement} />
+  </div>;
 }

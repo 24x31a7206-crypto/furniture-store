@@ -10,6 +10,13 @@ export type SiteContent = {
   heroPoster: string;
   marquee: string;
   footerNote: string;
+  contactEmail: string;
+  contactPhone: string;
+  storeAddress: string;
+  visitHours: string;
+  deliveryWindows: string[];
+  deliveryPolicy: string;
+  returnsPolicy: string;
   updatedAt?: string;
 };
 
@@ -22,13 +29,28 @@ export const defaultSiteContent: SiteContent = {
   heroPoster: '/assets/hero-room.jpg',
   marquee: 'Made slowly / Meant to stay / Designed for living',
   footerNote: 'Furniture for the everyday extraordinary.',
+  contactEmail: 'furnivisionsupport@gmail.com',
+  contactPhone: '',
+  storeAddress: '18 Walker Street\nNew York, NY 10013',
+  visitHours: 'By appointment',
+  deliveryWindows: ['Weekday morning', 'Weekday afternoon', 'Saturday'],
+  deliveryPolicy: 'White-glove delivery is included. Our team will confirm your delivery details after reviewing your order.',
+  returnsPolicy: '30-day returns. Contact our store team to discuss a return.',
 };
 
 export async function loadSiteContent(): Promise<SiteContent | null> {
   if (!db || !firebaseEnabled) return null;
   const snapshot = await getDoc(doc(db, 'siteContent', 'home'));
   if (!snapshot.exists()) return null;
-  return { ...defaultSiteContent, ...(snapshot.data() as Partial<SiteContent>) };
+  const saved = snapshot.data() as Partial<SiteContent>;
+  const deliveryWindows = Array.isArray(saved.deliveryWindows)
+    ? saved.deliveryWindows.filter((window): window is string => typeof window === 'string' && window.trim().length > 0)
+    : [];
+  return {
+    ...defaultSiteContent,
+    ...saved,
+    deliveryWindows: deliveryWindows.length ? deliveryWindows : [...defaultSiteContent.deliveryWindows],
+  };
 }
 
 export async function saveSiteContent(content: SiteContent) {
