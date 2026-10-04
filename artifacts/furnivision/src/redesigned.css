@@ -249,6 +249,14 @@
 .new-journal-grid .new-journal-feature img { aspect-ratio: 1.35; }
 .new-journal-grid h2 { margin-top: 10px; font: 27px var(--app-font-serif); }
 .new-journal-grid article > p:not(.new-kicker) { margin-top: 9px; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.6; }
+.new-policies > .new-section { padding-top: 30px; }
+.new-policies h1 { margin-top: 18px; font: clamp(52px, 8vw, 108px)/.9 var(--app-font-serif); letter-spacing: -.06em; }
+.new-policies h1 em { color: hsl(var(--accent)); }
+.new-policy-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 38px; }
+.new-policy-grid section { display: grid; align-content: start; gap: 12px; padding: 24px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+.new-policy-grid h2 { font: 25px var(--app-font-serif); }
+.new-policy-grid p, .new-policy-grid a { color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.7; }
+.new-policy-grid a { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 3px; }
 .new-footer { padding: 70px 32px 25px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 .new-footer__top { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 45px; max-width: 1480px; margin: auto; }
 .new-footer__top > div { display: grid; align-content: start; gap: 10px; font-size: 12px; }
@@ -266,6 +274,7 @@
   .new-nav, .new-search { display: none; }
   .new-menu-button { display: grid; }
   .new-hero, .new-product-detail, .new-checkout-layout, .new-account-auth { grid-template-columns: 1fr; }
+  .new-policy-grid { grid-template-columns: 1fr; }
   .new-hero__copy { padding: 70px 0 50px; }
   .new-hero__visual { min-height: 60vw; }
   .new-hero__proof { margin-top: 45px; }
