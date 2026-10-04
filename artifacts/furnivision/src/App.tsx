@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type FormEvent
 import { Heart, Search, ShoppingBag, Menu, X, MapPin, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import './index.css';
-import { createAccount, isCurrentUserAdmin, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
+import { createAccount, isCurrentUserAdmin, isVerifiedStoreOwner, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
 import { loadCatalog, type CatalogProduct } from './lib/admin';
 import { loadCustomerOrders, saveCustomerOrder, type CustomerDetails, type DeliveryLocation, type StoreOrder } from './lib/orders';
 import type { User } from 'firebase/auth';
@@ -278,7 +278,7 @@ function App() {
         return;
       }
       void loadCustomerOrders(current.uid).then(setOrders);
-      void isCurrentUserAdmin().then(setAdminAccess);
+      void isCurrentUserAdmin().then((isAdmin) => setAdminAccess(isAdmin || isVerifiedStoreOwner(current)));
     });
   }, []);
 

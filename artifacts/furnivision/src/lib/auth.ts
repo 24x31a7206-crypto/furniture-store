@@ -2,6 +2,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -29,10 +30,34 @@ const readableAuthError = (error: unknown) => {
   return 'We could not complete that request. Please try again.';
 };
 
+const storeOwnerEmail = 'furnivisionsupport@gmail.com';
+
+export function isStoreOwnerEmail(email: string | null | undefined) {
+  return email?.trim().toLowerCase() === storeOwnerEmail;
+}
+
+export function isVerifiedStoreOwner(user: Pick<User, 'email' | 'emailVerified'> | null | undefined) {
+  return Boolean(user?.emailVerified && isStoreOwnerEmail(user.email));
+}
+
 export async function createAccount(email: string, password: string): Promise<AuthResult> {
   if (!auth || !firebaseEnabled) return { user: null, error: 'Firebase is not configured yet.' };
   try {
-    return { user: (await createUserWithEmailAndPassword(auth, email, password)).user };
+    const user = (await createUserWithEmailAndPassword(auth, email, password)).user;
+    if (isStoreOwnerEmail(user.email) && !user.emailVerified) {
+      try {
+        await sendEmailVerification(user);
+      } catch (error) {
+        await signOut(auth);
+        throw error;
+      }
+      await signOut(auth);
+      return {
+        user: null,
+        error: `A verification link was sent to ${user.email}. Verify it, then sign in again to access the admin room.`,
+      };
+    }
+    return { user };
   } catch (error) {
     return { user: null, error: readableAuthError(error) };
   }
@@ -62,13 +87,15 @@ export async function signOutUser() {
 
 const ownerRef = () => db ? doc(db, 'adminConfig', 'primary') : null;
 
-export async function ensureFirstUserAdmin(user: Pick<User, 'uid'>) {
-  if (!db || !firebaseEnabled) return false;
+export async function ensureFirstUserAdmin(user: Pick<User, 'uid' | 'email' | 'emailVerified'>) {
+  if (!db || !firebaseEnabled || !isVerifiedStoreOwner(user)) return false;
   const ref = doc(db, 'adminConfig', 'primary');
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(ref);
     if (!snapshot.exists()) {
       transaction.set(ref, { uid: user.uid, createdAt: new Date().toISOString() });
+    } else if (snapshot.data().uid !== user.uid) {
+      transaction.update(ref, { uid: user.uid });
     }
   });
   const snapshot = await getDoc(ref);
@@ -76,7 +103,7 @@ export async function ensureFirstUserAdmin(user: Pick<User, 'uid'>) {
 }
 
 export async function isCurrentUserAdmin() {
-  if (!auth?.currentUser || !db || !firebaseEnabled) return false;
+  if (!auth?.currentUser || !db || !firebaseEnabled || !isVerifiedStoreOwner(auth.currentUser)) return false;
   const ref = ownerRef();
   if (!ref) return false;
   try {
