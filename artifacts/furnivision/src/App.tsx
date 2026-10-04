@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Heart, Search, ShoppingBag, Menu, X, MapPin, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole } from 'lucide-react';
+import { Heart, Search, ShoppingBag, Menu, X, MapPin, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole, Eye, EyeOff } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, useParams } from 'wouter';
 import './index.css';
-import { createAccount, isCurrentUserAdmin, isVerifiedStoreOwner, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
+import { createAccount, isCurrentUserAdmin, isVerifiedStoreOwner, sendPasswordReset, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
 import { loadCatalog, type CatalogProduct } from './lib/admin';
 import { loadCustomerOrders, saveCustomerOrder, type CustomerDetails, type DeliveryLocation, type StoreOrder } from './lib/orders';
 import type { User } from 'firebase/auth';
@@ -222,22 +222,56 @@ function AccountPage({ user, orders }: { user: User | null; orders: StoreOrder[]
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<'error' | 'success'>('error');
   const [adminAccess, setAdminAccess] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const finishAuth = async (action: () => Promise<AuthResult>) => {
     setBusy(true);
     setMessage('');
-    const result = await action();
-    if (result.user) setLocation('/');
-    else setMessage(result.error || 'Please try again.');
-    setBusy(false);
+    setMessageTone('error');
+    try {
+      const result = await action();
+      if (result.user) setLocation('/');
+      else setMessage(result.error || 'Please try again.');
+    } catch {
+      setMessage('We could not complete that request. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const requestPasswordReset = async () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setMessage('Enter your email above, then choose Forgot password.');
+      setMessageTone('error');
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    try {
+      const result = await sendPasswordReset(normalizedEmail);
+      if (result.error) {
+        setMessage(result.error);
+        setMessageTone('error');
+      } else {
+        setMessage('If an account exists for that email, a password reset link has been sent. Check your inbox and spam folder.');
+        setMessageTone('success');
+      }
+    } catch {
+      setMessage('We could not send a reset link. Check your connection and try again.');
+      setMessageTone('error');
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (!user) return <main className="mx-auto grid min-h-[calc(100svh-72px)] max-w-5xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:px-8">
     <div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">FurniVision / Your account</p><h1 className="mt-5 font-display text-6xl leading-[.9] tracking-[-.05em]">Keep the<br /><em>good stuff.</em></h1><p className="mt-6 max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">Save pieces, place orders, and keep delivery details in one place. Store owners can also open the admin control room here.</p></div>
-    <div className="border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] p-6 md:p-8"><div className="mb-7 flex border-b border-[hsl(var(--border))]"><button onClick={() => setMode('signin')} className={`flex-1 pb-3 text-sm font-semibold ${mode === 'signin' ? 'border-b-2 border-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>Sign in</button><button onClick={() => setMode('signup')} className={`flex-1 pb-3 text-sm font-semibold ${mode === 'signup' ? 'border-b-2 border-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>Sign up</button></div><form onSubmit={(event) => { event.preventDefault(); void finishAuth(() => mode === 'signin' ? signIn(email, password) : createAccount(email, password)); }} className="grid gap-5"><label className="grid gap-2 text-xs font-semibold">Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label><label className="grid gap-2 text-xs font-semibold">Password<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>{message && <p className="text-sm text-[hsl(var(--destructive))]" role="alert">{message}</p>}<button disabled={busy} className="flex items-center justify-center gap-2 bg-[hsl(var(--primary))] px-5 py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"><LockKeyhole size={15} /> {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button></form><div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[.15em] text-[hsl(var(--muted-foreground))]"><span className="h-px flex-1 bg-[hsl(var(--border))]" />or<span className="h-px flex-1 bg-[hsl(var(--border))]" /></div><button disabled={busy} onClick={() => void finishAuth(signInWithGoogle)} className="w-full border border-[hsl(var(--foreground)/.25)] px-5 py-3 text-sm font-semibold disabled:opacity-60">Continue with Google</button><p className="mt-5 text-center text-xs leading-5 text-[hsl(var(--muted-foreground))]">The first account claimed from the Admin room becomes the protected storefront owner.</p></div>
+    <div className="border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] p-6 md:p-8"><div className="mb-7 flex border-b border-[hsl(var(--border))]"><button onClick={() => { setMode('signin'); setMessage(''); setShowPassword(false); }} className={`flex-1 pb-3 text-sm font-semibold ${mode === 'signin' ? 'border-b-2 border-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>Sign in</button><button onClick={() => { setMode('signup'); setMessage(''); setShowPassword(false); }} className={`flex-1 pb-3 text-sm font-semibold ${mode === 'signup' ? 'border-b-2 border-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>Sign up</button></div><form onSubmit={(event) => { event.preventDefault(); void finishAuth(() => mode === 'signin' ? signIn(email, password) : createAccount(email, password)); }} className="grid gap-5"><label className="grid gap-2 text-xs font-semibold">Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label><label className="grid gap-2 text-xs font-semibold">Password<div className="relative"><input required minLength={6} type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} className="w-full pr-11" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} disabled={busy} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-60">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>{mode === 'signin' && <button type="button" onClick={() => void requestPasswordReset()} disabled={busy} className="justify-self-end text-xs font-semibold text-[hsl(var(--accent))] underline underline-offset-4 disabled:opacity-60">Forgot password?</button>}{message && <p className={`text-sm ${messageTone === 'error' ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--foreground))]'}`} role={messageTone === 'error' ? 'alert' : 'status'}>{message}</p>}<button disabled={busy} className="flex items-center justify-center gap-2 bg-[hsl(var(--primary))] px-5 py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"><LockKeyhole size={15} /> {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button></form><div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[.15em] text-[hsl(var(--muted-foreground))]"><span className="h-px flex-1 bg-[hsl(var(--border))]" />or<span className="h-px flex-1 bg-[hsl(var(--border))]" /></div><button disabled={busy} onClick={() => void finishAuth(signInWithGoogle)} className="w-full border border-[hsl(var(--foreground)/.25)] px-5 py-3 text-sm font-semibold disabled:opacity-60">Continue with Google</button><p className="mt-5 text-center text-xs leading-5 text-[hsl(var(--muted-foreground))]">The first account claimed from the Admin room becomes the protected storefront owner.</p></div>
   </main>;
 
   return <main className="mx-auto max-w-5xl px-5 py-12 md:px-8 md:py-20"><div className="flex flex-wrap items-end justify-between gap-5 border-b border-[hsl(var(--border))] pb-8"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">FurniVision / Account</p><h1 className="mt-4 font-display text-6xl leading-[.9]">Good to<br /><em>see you.</em></h1><p className="mt-5 text-sm text-[hsl(var(--muted-foreground))]">{user.email}</p></div><div className="flex gap-3">{adminAccess && <Link href="/admin" className="inline-flex items-center gap-2 bg-[hsl(var(--primary))] px-4 py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))]">Admin room <ShieldCheck size={15} /></Link>}<button onClick={() => void signOutUser()} className="border border-[hsl(var(--border))] px-4 py-3 text-sm font-semibold">Sign out</button></div></div><section className="mt-10"><div className="flex items-end justify-between"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-[hsl(var(--accent))]">Your pieces</p><h2 className="mt-2 font-display text-4xl">Order history</h2></div><span className="font-mono-ui text-xs text-[hsl(var(--muted-foreground))]">{orders.length} orders</span></div>{orders.length ? <div className="mt-6 divide-y divide-[hsl(var(--border))] border-y border-[hsl(var(--border))]">{orders.map((order) => <article className="flex flex-wrap items-center justify-between gap-4 py-5" key={order.id}><div><p className="font-mono-ui text-[10px] uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">{order.id} · {new Date(order.createdAt).toLocaleDateString()}</p><h3 className="mt-2 text-sm font-semibold">{order.items.map((item) => item.name).join(', ')}</h3><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{order.status} · {order.customer.city}</p></div><strong>{money(order.total)}</strong></article>)}</div> : <div className="mt-6 border border-dashed border-[hsl(var(--border))] p-10 text-center"><p className="font-display text-3xl">Your first room is still ahead.</p><Link href="/shop" className="mt-5 inline-flex border-b border-[hsl(var(--foreground))] pb-1 text-sm font-semibold">Shop the collection</Link></div>}</section></main>;

@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -16,18 +17,36 @@ export type AuthResult = {
   error?: string;
 };
 
+const authErrorCode = (error: unknown) => {
+  if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {
+    return error.code;
+  }
+  return '';
+};
+
 const readableAuthError = (error: unknown) => {
-  if (!(error instanceof Error)) return 'Something went wrong. Please try again.';
-  if (error.message.includes('auth/invalid-credential')) {
-    return 'Those details do not match an account.';
+  switch (authErrorCode(error)) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Email or password is incorrect. Check them and try again.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists.';
+    case 'auth/weak-password':
+      return 'Use a stronger password with at least six characters.';
+    case 'auth/invalid-email':
+      return 'Enter a valid email address.';
+    case 'auth/user-disabled':
+      return 'This account is disabled. Contact the store owner.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Wait a little, then try again.';
+    case 'auth/network-request-failed':
+      return 'Network error. Check your connection and try again.';
+    case 'auth/operation-not-allowed':
+      return 'Email and password sign-in is disabled for this Firebase project.';
+    default:
+      return 'We could not complete that request. Please try again.';
   }
-  if (error.message.includes('auth/email-already-in-use')) {
-    return 'An account with this email already exists.';
-  }
-  if (error.message.includes('auth/weak-password')) {
-    return 'Use a stronger password with at least six characters.';
-  }
-  return 'We could not complete that request. Please try again.';
 };
 
 const storeOwnerEmail = 'furnivisionsupport@gmail.com';
@@ -43,7 +62,7 @@ export function isVerifiedStoreOwner(user: Pick<User, 'email' | 'emailVerified'>
 export async function createAccount(email: string, password: string): Promise<AuthResult> {
   if (!auth || !firebaseEnabled) return { user: null, error: 'Firebase is not configured yet.' };
   try {
-    const user = (await createUserWithEmailAndPassword(auth, email, password)).user;
+    const user = (await createUserWithEmailAndPassword(auth, email.trim(), password)).user;
     if (isStoreOwnerEmail(user.email) && !user.emailVerified) {
       try {
         await sendEmailVerification(user);
@@ -66,10 +85,24 @@ export async function createAccount(email: string, password: string): Promise<Au
 export async function signIn(email: string, password: string): Promise<AuthResult> {
   if (!auth || !firebaseEnabled) return { user: null, error: 'Firebase is not configured yet.' };
   try {
-    return { user: (await signInWithEmailAndPassword(auth, email, password)).user };
+    return { user: (await signInWithEmailAndPassword(auth, email.trim(), password)).user };
   } catch (error) {
     return { user: null, error: readableAuthError(error) };
   }
+}
+
+export async function sendPasswordReset(email: string): Promise<{ error?: string }> {
+  if (!auth || !firebaseEnabled) return { error: 'Firebase is not configured yet.' };
+  try {
+    await sendPasswordResetEmail(auth, email.trim());
+  } catch (error) {
+    const code = authErrorCode(error);
+    // Keep the response the same for unknown emails to avoid revealing registered accounts.
+    if (code !== 'auth/user-not-found' && code !== 'auth/invalid-credential') {
+      return { error: readableAuthError(error) };
+    }
+  }
+  return {};
 }
 
 export async function signInWithGoogle(): Promise<AuthResult> {
