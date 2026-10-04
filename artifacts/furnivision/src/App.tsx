@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Heart, Search, ShoppingBag, Menu, X, MapPin, ArrowRight, ChevronDown, Minus, Plus, Trash2, SlidersHorizontal, Check, ArrowLeft, Truck, RotateCcw, ShieldCheck, Sparkles, UserRound, Share2, LockKeyhole } from 'lucide-react';
-import { Link, Route, Switch, useLocation, useParams } from 'wouter';
+import { Link, Redirect, Route, Switch, useLocation, useParams } from 'wouter';
 import './index.css';
 import { createAccount, isCurrentUserAdmin, isVerifiedStoreOwner, signIn, signInWithGoogle, signOutUser, subscribeToAuth, type AuthResult } from './lib/auth';
 import { loadCatalog, type CatalogProduct } from './lib/admin';
@@ -253,6 +253,7 @@ function App() {
   const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent);
   const [catalogVersion, setCatalogVersion] = useState(0);
   const [adminAccess, setAdminAccess] = useState(false);
+  const [adminAccessResolved, setAdminAccessResolved] = useState(false);
   const addCart = (id: string) => setCart(current => current.some(l => l.productId === id) ? current.map(l => l.productId === id ? { ...l, quantity: l.quantity + 1 } : l) : [...current, { productId: id, quantity: 1 }]);
   const setQuantity = (id: string, quantity: number) => setCart(current => quantity < 1 ? current.filter(l => l.productId !== id) : current.map(l => l.productId === id ? { ...l, quantity } : l));
   const removeCart = (id: string) => setCart(current => current.filter(l => l.productId !== id));
@@ -270,16 +271,32 @@ function App() {
   useEffect(() => {
     void reloadCatalog();
     void loadSiteContent().then((content) => { if (content) setSiteContent(content); });
-    return subscribeToAuth((current) => {
+    let authCheckId = 0;
+    const unsubscribe = subscribeToAuth((current) => {
+      const checkId = ++authCheckId;
       setUser(current);
       setAdminAccess(false);
+      setAdminAccessResolved(false);
       if (!current) {
         setOrders([]);
+        setAdminAccessResolved(true);
         return;
       }
-      void loadCustomerOrders(current.uid).then(setOrders);
-      void isCurrentUserAdmin().then((isAdmin) => setAdminAccess(isAdmin || isVerifiedStoreOwner(current)));
+      void loadCustomerOrders(current.uid).then((customerOrders) => {
+        if (checkId === authCheckId) setOrders(customerOrders);
+      }).catch(() => {
+        if (checkId === authCheckId) setOrders([]);
+      });
+      void isCurrentUserAdmin().then((isAdmin) => {
+        if (checkId !== authCheckId) return;
+        setAdminAccess(isAdmin || isVerifiedStoreOwner(current));
+        setAdminAccessResolved(true);
+      });
     });
+    return () => {
+      authCheckId += 1;
+      unsubscribe();
+    };
   }, []);
 
   const cartItems = useMemo(
@@ -329,7 +346,11 @@ function App() {
     />
   );
 
-  return <StoreContext.Provider value={{ wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal, user }}><Switch><Route path="/admin" component={() => <AdminDashboard user={user} onCatalogChange={reloadCatalog} onSiteContentChange={setSiteContent} />} /><Route component={() => storefront} /></Switch></StoreContext.Provider>;
+  return <StoreContext.Provider value={{ wishlist, cart, toggleWish, addCart, setQuantity, removeCart, cartCount: cart.reduce((sum, l) => sum + l.quantity, 0), cartTotal, user }}><Switch><Route path="/admin" component={() => {
+    if (!adminAccessResolved) return <main className="grid min-h-[70vh] place-items-center px-5 py-20 text-center" role="status">Checking admin access…</main>;
+    if (!adminAccess) return <Redirect to="/" />;
+    return <AdminDashboard user={user} onCatalogChange={reloadCatalog} onSiteContentChange={setSiteContent} />;
+  }} /><Route component={() => storefront} /></Switch></StoreContext.Provider>;
 }
 
 export default App;
