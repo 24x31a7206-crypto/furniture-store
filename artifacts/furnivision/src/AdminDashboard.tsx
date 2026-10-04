@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { BarChart3, Check, ChevronDown, ImagePlus, MapPin, Package, Pencil, Plus, RefreshCw, Save, Search, ShieldCheck, Trash2, Upload, X, type LucideIcon } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { ensureFirstUserAdmin, isCurrentUserAdmin } from './lib/auth';
+import { ensureFirstUserAdmin, isCurrentUserAdmin, isStoreOwnerEmail } from './lib/auth';
 import { deleteCatalogProduct, loadCatalog, saveCatalogProduct, type CatalogProduct } from './lib/admin';
 import { loadAllOrders, orderStatuses, saveDeliveryProof, updateOrderStatus, uploadDeliveryProof, type StoreOrder } from './lib/orders';
 import { defaultSiteContent, loadSiteContent, saveSiteContent, type SiteContent } from './lib/site-content';
@@ -49,7 +49,9 @@ export function AdminDashboard({ user, onCatalogChange }: { user: User | null; o
         if (active) {
           setAdmin(allowed);
           if (allowed) await refresh();
-          else setMessage('This account is not the storefront owner.');
+          else if (isStoreOwnerEmail(user.email) && !user.emailVerified) {
+            setMessage('Verify this email address, then sign in again to access the admin room.');
+          } else setMessage('This account is not the storefront owner.');
         }
       } catch {
         if (active) setMessage('Admin access could not be verified. Make sure Firestore rules are deployed.');
